@@ -1,0 +1,490 @@
+{
+  "timestamp": "2026-10-30T22:11:56Z",
+  "total_cases_evaluated": 30,
+  "total_reference_tokens": 194,
+  "metrics": {
+    "verbatim_wer_pct": 128.35,
+    "normalized_wer_pct": 47.12,
+    "accuracy_normalized_pct": 52.88
+  },
+  "named_entity_preservation": {
+    "brands": {
+      "total": 31,
+      "preserved": 9,
+      "accuracy_pct": 29.03,
+      "failures_count": 22
+    },
+    "units": {
+      "total": 29,
+      "preserved": 9,
+      "accuracy_pct": 31.03,
+      "failures_count": 20
+    },
+    "quantities": {
+      "total": 43,
+      "preserved": 8,
+      "accuracy_pct": 18.6,
+      "failures_count": 35
+    },
+    "product_terms": {
+      "total": 26,
+      "preserved": 7,
+      "accuracy_pct": 26.92,
+      "failures_count": 19
+    }
+  },
+  "breakdowns": {
+    "by_condition": {
+      "wav": {
+        "cases": 15,
+        "wer_pct": 46.74
+      },
+      "webm": {
+        "cases": 15,
+        "wer_pct": 47.47
+      }
+    },
+    "by_language": {
+      "hi-Latn": {
+        "cases": 26,
+        "wer_pct": 51.92
+      },
+      "en": {
+        "cases": 1,
+        "wer_pct": 125.0
+      },
+      "code-mix": {
+        "cases": 3,
+        "wer_pct": 12.9
+      }
+    }
+  },
+  "failures_sample": {
+    "brand_failures": [
+      {
+        "case_id": "TC002",
+        "entity": "maggi",
+        "ref": "Bhaiya ek kilo chini aur do packet Maggi dena.",
+        "hyp": "भैया एक किलो चीनी और दो पैकेट मैगी देना।"
+      },
+      {
+        "case_id": "TC003",
+        "entity": "parle",
+        "ref": "One packet Parle-G aur half litre Amul milk add kar do.",
+        "hyp": "one packet pearl G और half litre Amul milk add कर दो।"
+      },
+      {
+        "case_id": "TC003",
+        "entity": "parle-g",
+        "ref": "One packet Parle-G aur half litre Amul milk add kar do.",
+        "hyp": "one packet pearl G और half litre Amul milk add कर दो।"
+      },
+      {
+        "case_id": "TC005",
+        "entity": "maggi",
+        "ref": "Do packet maggi noodles chahiye.",
+        "hyp": "दो पैकेट मैगी नूडल्स चाहिए।"
+      },
+      {
+        "case_id": "TC008",
+        "entity": "amul",
+        "ref": "Aadha litre Amul Taaza doodh.",
+        "hyp": "আধা লিটারে আমুল তাজা দুধ।"
+      }
+    ],
+    "unit_failures": [
+      {
+        "case_id": "TC001",
+        "entity": "kilo",
+        "ref": "Mujhe ek kilo aata chahiye.",
+        "hyp": "मुझे एक किलो आटा चाहिए।"
+      },
+      {
+        "case_id": "TC002",
+        "entity": "packet",
+        "ref": "Bhaiya ek kilo chini aur do packet Maggi dena.",
+        "hyp": "भैया एक किलो चीनी और दो पैकेट मैगी देना।"
+      },
+      {
+        "case_id": "TC002",
+        "entity": "kilo",
+        "ref": "Bhaiya ek kilo chini aur do packet Maggi dena.",
+        "hyp": "भैया एक किलो चीनी और दो पैकेट मैगी देना।"
+      },
+      {
+        "case_id": "TC004",
+        "entity": "kilo",
+        "ref": "Aadha kilo gehun ka aata de do.",
+        "hyp": "आधा किलो गेहूँ का आटा दे दो।"
+      },
+      {
+        "case_id": "TC005",
+        "entity": "packet",
+        "ref": "Do packet maggi noodles chahiye.",
+        "hyp": "दो पैकेट मैगी नूडल्स चाहिए।"
+      }
+    ]
+  },
+  "case_evaluations": [
+    {
+      "case_id": "TC001",
+      "format": "webm",
+      "language_group": "hi-Latn",
+      "reference_text": "Mujhe ek kilo aata chahiye.",
+      "raw_transcript": "मुझे एक किलो आटा चाहिए।",
+      "normalized_reference": "mujhe ek kilo atta chahiye.",
+      "normalized_transcript": "mujhe ek kilo atta chahiye",
+      "verbatim_edits": 9,
+      "normalized_edits": 1,
+      "ref_word_count": 5
+    },
+    {
+      "case_id": "TC002",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "Bhaiya ek kilo chini aur do packet Maggi dena.",
+      "raw_transcript": "भैया एक किलो चीनी और दो पैकेट मैगी देना।",
+      "normalized_reference": "bhaiya ek kilo chini aur do packet maggi dena.",
+      "normalized_transcript": "bhaiya ek kilo chini aur do packet maggi dena",
+      "verbatim_edits": 16,
+      "normalized_edits": 1,
+      "ref_word_count": 9
+    },
+    {
+      "case_id": "TC003",
+      "format": "webm",
+      "language_group": "code-mix",
+      "reference_text": "One packet Parle-G aur half litre Amul milk add kar do.",
+      "raw_transcript": "one packet pearl G और half litre Amul milk add कर दो।",
+      "normalized_reference": "one packet parle-g aur half litre amul milk add kar do.",
+      "normalized_transcript": "one packet pearl g aur half litre amul milk add kar do",
+      "verbatim_edits": 4,
+      "normalized_edits": 3,
+      "ref_word_count": 12
+    },
+    {
+      "case_id": "TC004",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "Aadha kilo gehun ka aata de do.",
+      "raw_transcript": "आधा किलो गेहूँ का आटा दे दो।",
+      "normalized_reference": "aadha kilo gehun ka atta de do.",
+      "normalized_transcript": "aadha kilo gehun ka atta de do",
+      "verbatim_edits": 9,
+      "normalized_edits": 1,
+      "ref_word_count": 7
+    },
+    {
+      "case_id": "TC005",
+      "format": "webm",
+      "language_group": "hi-Latn",
+      "reference_text": "Do packet maggi noodles chahiye.",
+      "raw_transcript": "दो पैकेट मैगी नूडल्स चाहिए।",
+      "normalized_reference": "do packet maggi noodles chahiye.",
+      "normalized_transcript": "do packet maggi न डल स chahiye",
+      "verbatim_edits": 12,
+      "normalized_edits": 4,
+      "ref_word_count": 5
+    },
+    {
+      "case_id": "TC006",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "250 gram chini dena.",
+      "raw_transcript": "दो सौ पचास ग्राम चीनी देना।",
+      "normalized_reference": "250 gram chini dena.",
+      "normalized_transcript": "do sau पच स gram chini dena",
+      "verbatim_edits": 11,
+      "normalized_edits": 5,
+      "ref_word_count": 4
+    },
+    {
+      "case_id": "TC007",
+      "format": "webm",
+      "language_group": "hi-Latn",
+      "reference_text": "Paanch sau gram loose chawal.",
+      "raw_transcript": "पाँच सौ ग्राम loose चावल।",
+      "normalized_reference": "paanch sau gram loose chawal.",
+      "normalized_transcript": "paanch sau gram loose chawal",
+      "verbatim_edits": 8,
+      "normalized_edits": 1,
+      "ref_word_count": 5
+    },
+    {
+      "case_id": "TC008",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "Aadha litre Amul Taaza doodh.",
+      "raw_transcript": "আধা লিটারে আমুল তাজা দুধ।",
+      "normalized_reference": "aadha litre amul taaza doodh.",
+      "normalized_transcript": "আধ ল ট র আম ল ত জ দ ধ",
+      "verbatim_edits": 10,
+      "normalized_edits": 10,
+      "ref_word_count": 5
+    },
+    {
+      "case_id": "TC009",
+      "format": "webm",
+      "language_group": "hi-Latn",
+      "reference_text": "Ek litre Amul Taaza milk dena.",
+      "raw_transcript": "एक लीटर अमूल ताज़ा मिल्क देना।",
+      "normalized_reference": "ek litre amul taaza milk dena.",
+      "normalized_transcript": "ek litre amul taaza म ल क dena",
+      "verbatim_edits": 12,
+      "normalized_edits": 4,
+      "ref_word_count": 6
+    },
+    {
+      "case_id": "TC010",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "Amul Gold aadha litre dena.",
+      "raw_transcript": "अमूल गोल्ड आधा लीटर देना।",
+      "normalized_reference": "amul gold aadha litre dena.",
+      "normalized_transcript": "amul gold aadha litre dena",
+      "verbatim_edits": 10,
+      "normalized_edits": 1,
+      "ref_word_count": 5
+    },
+    {
+      "case_id": "TC011",
+      "format": "webm",
+      "language_group": "hi-Latn",
+      "reference_text": "Ek kilo toor dal, aadha kilo masoor dal aur ek Tata namak.",
+      "raw_transcript": "एक किलो टोर दाल, आधा किलो मसूर दाल और एक टाटा नमक।",
+      "normalized_reference": "ek kilo toor dal, aadha kilo masoor dal aur ek tata namak.",
+      "normalized_transcript": "ek kilo ट र dal aadha kilo masoor dal aur ek tata namak",
+      "verbatim_edits": 19,
+      "normalized_edits": 4,
+      "ref_word_count": 12
+    },
+    {
+      "case_id": "TC012",
+      "format": "wav",
+      "language_group": "code-mix",
+      "reference_text": "Please add two Good Day biscuit packets and one Coke bottle.",
+      "raw_transcript": "Please add two Good Day biscuit packets and one Coke bottle.",
+      "normalized_reference": "please add two good day biscuit packets and one coke bottle.",
+      "normalized_transcript": "please add two good day biscuit packets and one coke bottle.",
+      "verbatim_edits": 0,
+      "normalized_edits": 0,
+      "ref_word_count": 11
+    },
+    {
+      "case_id": "TC013",
+      "format": "webm",
+      "language_group": "en",
+      "reference_text": "Quarter kilo besan chahiye.",
+      "raw_transcript": "क्वार्टर किलो बेसन चाहिए",
+      "normalized_reference": "quarter kilo besan chahiye.",
+      "normalized_transcript": "क व र टर kilo besan chahiye",
+      "verbatim_edits": 11,
+      "normalized_edits": 5,
+      "ref_word_count": 4
+    },
+    {
+      "case_id": "TC014",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "Ek Nescafe coffee jar de do.",
+      "raw_transcript": "एक Nescafe coffee jar दे दो।",
+      "normalized_reference": "ek nescafe coffee jar de do.",
+      "normalized_transcript": "ek nescafe coffee jar de do",
+      "verbatim_edits": 3,
+      "normalized_edits": 1,
+      "ref_word_count": 6
+    },
+    {
+      "case_id": "TC015",
+      "format": "webm",
+      "language_group": "hi-Latn",
+      "reference_text": "Mujhe chhe Nescafe coffee jar chahiye.",
+      "raw_transcript": "मुझे छह Nescafe coffee jar चाहिए।",
+      "normalized_reference": "mujhe chhe nescafe coffee jar chahiye.",
+      "normalized_transcript": "mujhe chhe nescafe coffee jar chahiye",
+      "verbatim_edits": 6,
+      "normalized_edits": 1,
+      "ref_word_count": 6
+    },
+    {
+      "case_id": "TC016",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "Das Amul ghee ke jar de do.",
+      "raw_transcript": "दस अमूल घी के जार दे दो।",
+      "normalized_reference": "das amul ghee ke jar de do.",
+      "normalized_transcript": "das amul ghee ke jar de do",
+      "verbatim_edits": 9,
+      "normalized_edits": 1,
+      "ref_word_count": 7
+    },
+    {
+      "case_id": "TC017",
+      "format": "webm",
+      "language_group": "hi-Latn",
+      "reference_text": "Ek kilo chini... nahi, aadha kilo kar do.",
+      "raw_transcript": "एक किलो चीनी? नहीं आधा किलो कर दो",
+      "normalized_reference": "ek kilo chini... nahi, aadha kilo kar do.",
+      "normalized_transcript": "ek kilo chini nahi aadha kilo kar do",
+      "verbatim_edits": 11,
+      "normalized_edits": 3,
+      "ref_word_count": 8
+    },
+    {
+      "case_id": "TC018",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "Maggi hata do.",
+      "raw_transcript": "Maggi हाताळतो",
+      "normalized_reference": "maggi hata do.",
+      "normalized_transcript": "maggi ह त ळत",
+      "verbatim_edits": 3,
+      "normalized_edits": 3,
+      "ref_word_count": 3
+    },
+    {
+      "case_id": "TC019",
+      "format": "webm",
+      "language_group": "hi-Latn",
+      "reference_text": "Ek doodh de dena.",
+      "raw_transcript": "एक दूध दे देना",
+      "normalized_reference": "ek doodh de dena.",
+      "normalized_transcript": "ek doodh द dena",
+      "verbatim_edits": 6,
+      "normalized_edits": 2,
+      "ref_word_count": 4
+    },
+    {
+      "case_id": "TC020",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "Ek Amul milk dena.",
+      "raw_transcript": "एक Amul milk देना।",
+      "normalized_reference": "ek amul milk dena.",
+      "normalized_transcript": "ek amul milk dena",
+      "verbatim_edits": 3,
+      "normalized_edits": 1,
+      "ref_word_count": 4
+    },
+    {
+      "case_id": "TC021",
+      "format": "webm",
+      "language_group": "hi-Latn",
+      "reference_text": "Thoda sa aata de dena.",
+      "raw_transcript": "थोड़ा सा आटा दे देना",
+      "normalized_reference": "thoda sa atta de dena.",
+      "normalized_transcript": "थ ड स atta द dena",
+      "verbatim_edits": 7,
+      "normalized_edits": 5,
+      "ref_word_count": 5
+    },
+    {
+      "case_id": "TC022",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "Do packet Maggi nahi, ek hi packet.",
+      "raw_transcript": "Do packet Maggi nahi, ek hi packet.",
+      "normalized_reference": "do packet maggi nahi, ek hi packet.",
+      "normalized_transcript": "do packet maggi nahi, ek hi packet.",
+      "verbatim_edits": 0,
+      "normalized_edits": 0,
+      "ref_word_count": 7
+    },
+    {
+      "case_id": "TC023",
+      "format": "webm",
+      "language_group": "code-mix",
+      "reference_text": "Do litre Amul Taaza milk aur aadha kilo chini.",
+      "raw_transcript": "दो लीटर Amul ताज़ा milk और आधा किलो चीनी।",
+      "normalized_reference": "do litre amul taaza milk aur aadha kilo chini.",
+      "normalized_transcript": "do litre amul taaza milk aur aadha kilo chini",
+      "verbatim_edits": 11,
+      "normalized_edits": 1,
+      "ref_word_count": 9
+    },
+    {
+      "case_id": "TC024",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "Teen Parle-G aur do Lays chips.",
+      "raw_transcript": "Teen Parla G या Do Lace chips.",
+      "normalized_reference": "teen parle-g aur do lays chips.",
+      "normalized_transcript": "teen parla g य do lace chips.",
+      "verbatim_edits": 3,
+      "normalized_edits": 4,
+      "ref_word_count": 7
+    },
+    {
+      "case_id": "TC025",
+      "format": "webm",
+      "language_group": "hi-Latn",
+      "reference_text": "Dabur amla ka sau ml wala tel.",
+      "raw_transcript": "दाबुर अमला का सौ ml वाला तेल।",
+      "normalized_reference": "dabur amla ka sau ml wala tel.",
+      "normalized_transcript": "द ब र अमल ka sau ml wala oil",
+      "verbatim_edits": 10,
+      "normalized_edits": 5,
+      "ref_word_count": 7
+    },
+    {
+      "case_id": "TC026",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "Ek kilo dragon fruit de do.",
+      "raw_transcript": "এক কিলো ড্রাগন ফ্রুট দিয়ে দাও।",
+      "normalized_reference": "ek kilo dragon fruit de do.",
+      "normalized_transcript": "এক ক ল ড র গন ফ র ট দ য দ ও",
+      "verbatim_edits": 13,
+      "normalized_edits": 13,
+      "ref_word_count": 6
+    },
+    {
+      "case_id": "TC027",
+      "format": "webm",
+      "language_group": "hi-Latn",
+      "reference_text": "Ek Maggi ka aadha kilo de do.",
+      "raw_transcript": "एक मैगी का आधा किलो दे दो।",
+      "normalized_reference": "ek maggi ka aadha kilo de do.",
+      "normalized_transcript": "ek maggi ka aadha kilo de do",
+      "verbatim_edits": 9,
+      "normalized_edits": 1,
+      "ref_word_count": 7
+    },
+    {
+      "case_id": "TC028",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "Amul Taaza aadha litre kitne ka hai?",
+      "raw_transcript": "अमूल ताज़ा आधा लीटर कितने का है?",
+      "normalized_reference": "amul taaza aadha litre kitne ka hai",
+      "normalized_transcript": "amul taaza aadha litre kitne ka hai",
+      "verbatim_edits": 11,
+      "normalized_edits": 0,
+      "ref_word_count": 7
+    },
+    {
+      "case_id": "TC029",
+      "format": "webm",
+      "language_group": "hi-Latn",
+      "reference_text": "Aapke paas kitna Parle-G hai?",
+      "raw_transcript": "आपके पास कितना पार्लेजी है?",
+      "normalized_reference": "aapke paas kitna parle-g hai",
+      "normalized_transcript": "आपक प स kitna प र ल ज hai",
+      "verbatim_edits": 10,
+      "normalized_edits": 7,
+      "ref_word_count": 6
+    },
+    {
+      "case_id": "TC030",
+      "format": "wav",
+      "language_group": "hi-Latn",
+      "reference_text": "Haan, order confirm kar do.",
+      "raw_transcript": "हाँ, order confirm कर दो।",
+      "normalized_reference": "haan, order confirm kar do.",
+      "normalized_transcript": "haan order confirm kar do",
+      "verbatim_edits": 3,
+      "normalized_edits": 2,
+      "ref_word_count": 5
+    }
+  ]
+}

@@ -1,0 +1,395 @@
+{
+  "benchmark_summary": {
+    "total_test_cases": 30,
+    "exact_cart_matches": 28,
+    "exact_cart_match_rate_pct": 93.33,
+    "total_evaluable_items": 31,
+    "product_id_accuracy_pct": 93.55,
+    "quantity_accuracy_pct": 93.55,
+    "ambiguity_detection_pct": 100.0,
+    "oversell_violations": 0,
+    "false_additions": 1,
+    "missed_products": 1,
+    "false_removals": 0,
+    "multi_turn_scenarios_passed": "5/5 (100.0%)"
+  },
+  "phase_comparison": {
+    "phase_3_product_id_accuracy_pct": 93.5,
+    "phase_3_quantity_accuracy_pct": 93.5,
+    "phase_8_product_id_accuracy_pct": 93.55,
+    "phase_8_quantity_accuracy_pct": 93.55,
+    "phase_3_scenarios_passed": "5/5 (100%)",
+    "phase_8_scenarios_passed": "5/5 (100%)",
+    "delta_product_accuracy": 0.05,
+    "delta_quantity_accuracy": 0.05
+  },
+  "error_taxonomy": {
+    "transcript_origin_errors": 0,
+    "parser_origin_errors": 4,
+    "oversell_errors": 0
+  },
+  "cases": [
+    {
+      "case_id": "TC001",
+      "category": "single_item",
+      "utterance": "Mujhe ek kilo aata chahiye.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 1 kg Loose Wheat Flour (Atta) add kar diye hain. Aapka total ₹42.00 hua."
+    },
+    {
+      "case_id": "TC002",
+      "category": "multi_item",
+      "utterance": "Bhaiya ek kilo chini aur do packet Maggi dena.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 1 kg Loose Sugar, 2 packet Maggi Masala Noodles 70 g add kar diye hain. Aapka total ₹74.00 hua."
+    },
+    {
+      "case_id": "TC003",
+      "category": "code_mix",
+      "utterance": "One packet Parle-G aur half litre Amul milk add kar do.",
+      "expected_action": "add_items",
+      "actual_action": "clarify_size",
+      "state": "DialogueState.NEEDS_CLARIFICATION",
+      "cart_matches": false,
+      "error_origin": "parser_product_miss",
+      "spoken_response": "Kaunsa product chahiye? Options: Amul Taaza Milk 500 ml Pouch (₹29.00), Amul Gold Milk 500 ml Pouch (₹34.00)"
+    },
+    {
+      "case_id": "TC004",
+      "category": "alias",
+      "utterance": "Aadha kilo gehun ka aata de do.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 0.5 kg Loose Wheat Flour (Atta) add kar diye hain. Aapka total ₹21.00 hua."
+    },
+    {
+      "case_id": "TC005",
+      "category": "alias",
+      "utterance": "Do packet maggi noodles chahiye.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 2 packet Maggi Masala Noodles 70 g add kar diye hain. Aapka total ₹28.00 hua."
+    },
+    {
+      "case_id": "TC006",
+      "category": "unit_conversion",
+      "utterance": "250 gram chini dena.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 0.25 kg Loose Sugar add kar diye hain. Aapka total ₹11.50 hua."
+    },
+    {
+      "case_id": "TC007",
+      "category": "unit_conversion",
+      "utterance": "Paanch sau gram loose chawal.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 0.5 kg Regular Rice (Loose) add kar diye hain. Aapka total ₹27.50 hua."
+    },
+    {
+      "case_id": "TC008",
+      "category": "pack_size_match",
+      "utterance": "Aadha litre Amul Taaza doodh.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 1 pouch Amul Taaza Milk 500 ml Pouch add kar diye hain. Aapka total ₹29.00 hua."
+    },
+    {
+      "case_id": "TC009",
+      "category": "pack_size_match",
+      "utterance": "Ek litre Amul Taaza milk dena.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 2 pouch Amul Taaza Milk 500 ml Pouch add kar diye hain. Aapka total ₹58.00 hua."
+    },
+    {
+      "case_id": "TC010",
+      "category": "brand_variant",
+      "utterance": "Amul Gold aadha litre dena.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 1 pouch Amul Gold Milk 500 ml Pouch add kar diye hain. Aapka total ₹34.00 hua."
+    },
+    {
+      "case_id": "TC011",
+      "category": "multi_item",
+      "utterance": "Ek kilo toor dal, aadha kilo masoor dal aur ek Tata namak.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 1 packet Toor Dal 1 kg, 0.5 packet Masoor Dal 1 kg, 1 packet Tata Salt 1 kg add kar diye hain. Aapka total ₹235.00 hua."
+    },
+    {
+      "case_id": "TC012",
+      "category": "code_mix",
+      "utterance": "Please add two Good Day biscuit packets and one Coke bottle.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 2 packet Britannia Good Day 100 g, 1 bottle Coca-Cola 750 ml add kar diye hain. Aapka total ₹90.00 hua."
+    },
+    {
+      "case_id": "TC013",
+      "category": "quantity_decimal",
+      "utterance": "Quarter kilo besan chahiye.",
+      "expected_action": "clarify_or_reject",
+      "actual_action": "clarify_or_reject",
+      "state": "DialogueState.NEEDS_CLARIFICATION",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Besan 1 kg sirf 1.000 kg ke fixed pack mein uplabdh hai."
+    },
+    {
+      "case_id": "TC014",
+      "category": "out_of_stock",
+      "utterance": "Ek Nescafe coffee jar de do.",
+      "expected_action": "check_stock",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 1 jar Nescafe Classic Coffee 100 g add kar diye hain. Aapka total ₹310.00 hua."
+    },
+    {
+      "case_id": "TC015",
+      "category": "out_of_stock",
+      "utterance": "Mujhe chhe Nescafe coffee jar chahiye.",
+      "expected_action": "reject_insufficient_stock",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": false,
+      "error_origin": "parser_oversell_addition",
+      "spoken_response": "Ji, 6 jar Nescafe Classic Coffee 100 g add kar diye hain. Aapka total ₹1860.00 hua."
+    },
+    {
+      "case_id": "TC016",
+      "category": "unavailable",
+      "utterance": "Das Amul ghee ke jar de do.",
+      "expected_action": "reject_insufficient_stock",
+      "actual_action": "reject_insufficient_stock",
+      "state": "DialogueState.NEEDS_CLARIFICATION",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Abhi sirf 7.000 jar available hain. Kya 7.000 add kar doon?"
+    },
+    {
+      "case_id": "TC017",
+      "category": "correction_single",
+      "utterance": "Ek kilo chini... nahi, aadha kilo kar do.",
+      "expected_action": "replace_quantity",
+      "actual_action": "replace_quantity",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Loose Sugar ki quantity 0.5 kg kar di gayi hai."
+    },
+    {
+      "case_id": "TC018",
+      "category": "remove_item",
+      "utterance": "Maggi hata do.",
+      "expected_action": "remove_item",
+      "actual_action": "remove_item",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Product cart se hata diya gaya hai."
+    },
+    {
+      "case_id": "TC019",
+      "category": "ambiguous_product",
+      "utterance": "Ek doodh de dena.",
+      "expected_action": "clarify_product",
+      "actual_action": "clarify_product",
+      "state": "DialogueState.NEEDS_CLARIFICATION",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Kaunsa product chahiye? Options: Mother Dairy Toned Milk 500 ml (₹28.00), Amul Taaza Milk 500 ml Pouch (₹29.00), Amul Gold Milk 500 ml Pouch (₹34.00)"
+    },
+    {
+      "case_id": "TC020",
+      "category": "ambiguous_size",
+      "utterance": "Ek Amul milk dena.",
+      "expected_action": "clarify_size",
+      "actual_action": "clarify_size",
+      "state": "DialogueState.NEEDS_CLARIFICATION",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Kaunsa product chahiye? Options: Amul Taaza Milk 500 ml Pouch (₹29.00), Amul Gold Milk 500 ml Pouch (₹34.00)"
+    },
+    {
+      "case_id": "TC021",
+      "category": "unclear_quantity",
+      "utterance": "Thoda sa aata de dena.",
+      "expected_action": "clarify_quantity",
+      "actual_action": "clarify_quantity",
+      "state": "DialogueState.NEEDS_CLARIFICATION",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Kripya batayein kitna quantity chahiye (jaise ek kilo ya aadha kilo)?"
+    },
+    {
+      "case_id": "TC022",
+      "category": "negation_correction",
+      "utterance": "Do packet Maggi nahi, ek hi packet.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Maggi Masala Noodles 70 g ki quantity 1 packet kar di gayi hai."
+    },
+    {
+      "case_id": "TC023",
+      "category": "mixed_units",
+      "utterance": "Do litre Amul Taaza milk aur aadha kilo chini.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 4 pouch Amul Taaza Milk 500 ml Pouch, 0.5 kg Loose Sugar add kar diye hain. Aapka total ₹139.00 hua."
+    },
+    {
+      "case_id": "TC024",
+      "category": "multiple_quantities",
+      "utterance": "Teen Parle-G aur do Lays chips.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 3 packet Parle-G Biscuits 100 g, 2 packet Lays Classic Chips 50 g add kar diye hain. Aapka total ₹70.00 hua."
+    },
+    {
+      "case_id": "TC025",
+      "category": "brand_alias",
+      "utterance": "Dabur amla ka sau ml wala tel.",
+      "expected_action": "add_items",
+      "actual_action": "add_items",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Ji, 1 bottle Dabur Amla Hair Oil 100 ml add kar diye hain. Aapka total ₹48.00 hua."
+    },
+    {
+      "case_id": "TC026",
+      "category": "product_not_found",
+      "utterance": "Ek kilo dragon fruit de do.",
+      "expected_action": "product_not_found",
+      "actual_action": "product_not_found",
+      "state": "DialogueState.NEEDS_CLARIFICATION",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Maaf kijiye, yeh item humaare store mein uplabdh nahi hai."
+    },
+    {
+      "case_id": "TC027",
+      "category": "unsupported_unit",
+      "utterance": "Ek Maggi ka aadha kilo de do.",
+      "expected_action": "clarify_unit",
+      "actual_action": "clarify_unit",
+      "state": "DialogueState.NEEDS_CLARIFICATION",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Maggi Masala Noodles 70 g sirf packet mein uplabdh hai."
+    },
+    {
+      "case_id": "TC028",
+      "category": "price_question",
+      "utterance": "Amul Taaza aadha litre kitne ka hai?",
+      "expected_action": "quote_price",
+      "actual_action": "quote_price",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Amul Taaza Milk 500 ml Pouch ka price ₹29.00 hai."
+    },
+    {
+      "case_id": "TC029",
+      "category": "stock_question",
+      "utterance": "Aapke paas kitna Parle-G hai?",
+      "expected_action": "quote_stock",
+      "actual_action": "quote_stock",
+      "state": "DialogueState.COLLECTING",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Humaare paas Parle-G Biscuits 100 g ke 45.000 packet uplabdh hain."
+    },
+    {
+      "case_id": "TC030",
+      "category": "confirmation",
+      "utterance": "Haan, order confirm kar do.",
+      "expected_action": "confirm_existing_cart",
+      "actual_action": "confirm_existing_cart",
+      "state": "DialogueState.ORDER_PLACED",
+      "cart_matches": true,
+      "error_origin": null,
+      "spoken_response": "Aapka order confirm ho gaya hai. Total amount: ₹42.00."
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "CONV001",
+      "name": "Quantity correction",
+      "passed": true,
+      "final_cart_items": 1
+    },
+    {
+      "scenario_id": "CONV002",
+      "name": "Add then remove",
+      "passed": true,
+      "final_cart_items": 1
+    },
+    {
+      "scenario_id": "CONV003",
+      "name": "Ambiguous milk clarification",
+      "passed": true,
+      "final_cart_items": 1
+    },
+    {
+      "scenario_id": "CONV004",
+      "name": "Insufficient inventory",
+      "passed": true,
+      "final_cart_items": 1
+    },
+    {
+      "scenario_id": "CONV005",
+      "name": "Review and explicit confirmation",
+      "passed": true,
+      "final_cart_items": 2
+    }
+  ]
+}

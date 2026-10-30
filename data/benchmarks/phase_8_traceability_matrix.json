@@ -1,0 +1,194 @@
+{
+  "total_requirements": 14,
+  "requirements": [
+    {
+      "req_id": "FR-01",
+      "title": "Voice Audio Ingestion & Format Handling",
+      "prd_section": "7.1",
+      "description": "Browser MediaRecorder audio capture (<10MB, <60s duration, WebM/WAV containers)",
+      "test_file": "tests/voice/test_audio_service.py",
+      "test_functions": [
+        "test_detect_format_wav",
+        "test_detect_format_webm",
+        "test_validate_audio_upload_size_limit",
+        "test_convert_to_pcm16_wav_bypass",
+        "test_convert_webm_to_pcm16_wav"
+      ],
+      "reliability_test": "tests/integration/test_phase8_functional_reliability.py::test_audio_upload_size_limit_rejection",
+      "verification_evidence": "Upload size >10MB returns 413, corrupted headers return 400, WebM transcodes to 16kHz PCM WAV."
+    },
+    {
+      "req_id": "FR-02",
+      "title": "Speech-to-Text Transcription (Gnani Prisma)",
+      "prd_section": "7.2",
+      "description": "Gnani Prisma STT integration (vachana.ai STT v3) with indic-auto / hi-IN and codemix formatting",
+      "test_file": "tests/voice/test_speech_to_text.py",
+      "test_functions": [
+        "test_prisma_mock_mode",
+        "test_prisma_missing_api_key",
+        "test_prisma_successful_response",
+        "test_prisma_http_error"
+      ],
+      "live_smoke_test": "tests/gnani/test_prisma.py",
+      "verification_evidence": "Prisma live API transcribes audio in ~498ms RTT with codemix formatting preserving English brands."
+    },
+    {
+      "req_id": "FR-03",
+      "title": "Transcript Normalization & Synonym Mapping",
+      "prd_section": "7.3",
+      "description": "Unicode normalization, punctuation stripping, phonetic colloquial synonym mapping, preserving raw and normalized",
+      "test_file": "tests/intelligence/test_normalizer.py",
+      "test_functions": [
+        "test_unicode_nfc_normalization",
+        "test_hindi_colloquial_spelling_variants",
+        "test_intra_utterance_correction_detection"
+      ],
+      "verification_evidence": "Normalized transcripts resolve 'aata'->'atta', 'cheeni'->'sugar', preserving raw input."
+    },
+    {
+      "req_id": "FR-04",
+      "title": "Multi-Strategy Product Matching",
+      "prd_section": "7.4",
+      "description": "Exact name match, exact alias match, RapidFuzz fuzzy match, ambiguity detection triggering NEEDS_CLARIFICATION",
+      "test_file": "tests/intelligence/test_product_matcher.py",
+      "test_functions": [
+        "test_exact_canonical_match",
+        "test_exact_alias_match",
+        "test_fuzzy_match_within_threshold",
+        "test_ambiguity_detection_multiple_brands"
+      ],
+      "verification_evidence": "93.5% product identification accuracy across 30 starter pack benchmarks; ambiguity correctly identified for generic 'doodh'."
+    },
+    {
+      "req_id": "FR-05",
+      "title": "Quantity & Packaging Unit Resolution",
+      "prd_section": "7.5",
+      "description": "Standard metric (kg, g, L, ml) and vernacular (aadha kilo, pao bhar, packet) with package integrity rule",
+      "test_file": "tests/intelligence/test_quantity_parser.py",
+      "test_functions": [
+        "test_standard_metric_extraction",
+        "test_vernacular_hindi_numbers",
+        "test_package_integrity_rule_fixed_skus"
+      ],
+      "verification_evidence": "93.5% quantity extraction accuracy; fractional requests for fixed-package SKUs (250g of 1kg besan) trigger clarification."
+    },
+    {
+      "req_id": "FR-06",
+      "title": "Conversational Intent & State Machine",
+      "prd_section": "7.6",
+      "description": "5 states (COLLECTING, NEEDS_CLARIFICATION, AWAITING_CONFIRMATION, ORDER_PLACED, CANCELLED)",
+      "test_file": "tests/intelligence/test_intent_classifier.py",
+      "test_functions": [
+        "test_add_intent",
+        "test_remove_intent",
+        "test_clarification_intent",
+        "test_confirm_intent",
+        "test_cancel_intent"
+      ],
+      "scenario_test": "tests/intelligence/test_conversation_scenarios.py",
+      "verification_evidence": "5/5 multi-turn scenarios passed 100% verifying state transitions across turns."
+    },
+    {
+      "req_id": "FR-07",
+      "title": "Conversational Cart Modifications",
+      "prd_section": "7.7",
+      "description": "Quantity override ('nahi aadha kilo kar do'), item removal ('Maggi hata do'), price inquiry, clear cart",
+      "test_file": "tests/intelligence/test_conversation_scenarios.py",
+      "test_functions": [
+        "test_benchmark_all_5_conversation_scenarios"
+      ],
+      "verification_evidence": "Quantity replacement and removal verified in CONV001 and CONV002; total recalculated authoritative."
+    },
+    {
+      "req_id": "FR-08",
+      "title": "Authoritative Inventory & Price Verification",
+      "prd_section": "7.8",
+      "description": "Live stock checks, partial stock explanation, authoritative pricing strictly from products.price_inr",
+      "test_file": "tests/backend/test_inventory_api.py",
+      "test_functions": [
+        "test_get_inventory_levels",
+        "test_update_inventory_stock_quantity",
+        "test_low_stock_threshold_alert"
+      ],
+      "verification_evidence": "0 oversell boundary violations; prices computed strictly via database; partial stock explained when requested > available."
+    },
+    {
+      "req_id": "FR-09",
+      "title": "Atomic Two-Phase Order Confirmation",
+      "prd_section": "7.9",
+      "description": "Customer confirms pending order (0 stock deducted); merchant acceptance executes row lock & decrements stock",
+      "test_file": "tests/integration/test_postgres_e2e_workflows.py",
+      "test_functions": [
+        "test_customer_checkout_creates_pending_order_with_zero_stock_deduction",
+        "test_merchant_atomic_acceptance_deducts_stock_and_logs_audit_movement"
+      ],
+      "concurrency_test": "tests/integration/test_postgres_concurrency.py",
+      "verification_evidence": "PostgreSQL 16.6 concurrency test: 2 simultaneous orders on 1 unit results in exactly 1 success (200) and 1 conflict (409)."
+    },
+    {
+      "req_id": "FR-10",
+      "title": "Spoken Feedback via Gnani Timbre TTS",
+      "prd_section": "7.10",
+      "description": "Conversational Hindi speech feedback; graceful fallback on TTS error without losing cart turn",
+      "test_file": "tests/voice/test_text_to_speech.py",
+      "test_functions": [
+        "test_timbre_mock_synthesis",
+        "test_timbre_audio_caching",
+        "test_timbre_hindi_number_formatting"
+      ],
+      "reliability_test": "tests/integration/test_phase8_functional_reliability.py::test_voice_turn_tts_failure_recovery",
+      "verification_evidence": "Timbre synthesizes WAV audio in ~1.38s; TTS network timeout sets audio_status='failed' and returns 200 with cart preserved."
+    },
+    {
+      "req_id": "FR-11",
+      "title": "Shopkeeper Operations Interface",
+      "prd_section": "7.11",
+      "description": "Merchant JWT auth, order feed, acceptance, rejection (0 stock), preparation, completion, cancellation with restock",
+      "test_file": "tests/backend/test_merchant_order_lifecycle.py",
+      "test_functions": [
+        "test_merchant_overview_live_metrics",
+        "test_order_full_lifecycle_progression",
+        "test_order_cancellation_restores_inventory",
+        "test_order_rejection_flow_zero_stock_deduction"
+      ],
+      "verification_evidence": "Full state progression verified; rejection touches 0 stock; cancellation restores stock with audit row."
+    },
+    {
+      "req_id": "NFR-01",
+      "title": "Latency Targets (Voice Turn <= 4s Median, <= 10s p95)",
+      "prd_section": "8.1",
+      "description": "Prisma STT <=1500ms, Engine <=250ms, Timbre <=1500ms, Total <=4000ms median",
+      "test_file": "tests/voice/run_phase8_performance_trials.py",
+      "test_functions": [
+        "run_trials"
+      ],
+      "verification_evidence": "Empirical median: 2192ms (target <=4000ms), p95: 3043ms (target <=10000ms), engine: 50.4ms (target <=250ms)."
+    },
+    {
+      "req_id": "NFR-02",
+      "title": "Zero Overselling & Transaction Integrity",
+      "prd_section": "8.2",
+      "description": "0 oversell boundary violations, 0 price calculation errors, duplicate idempotency enforcement",
+      "test_file": "tests/integration/test_postgres_concurrency.py",
+      "test_functions": [
+        "test_concurrent_order_acceptance_prevents_overselling",
+        "test_concurrent_duplicate_acceptance_idempotency"
+      ],
+      "verification_evidence": "PostgreSQL row locks SELECT FOR UPDATE eliminate race conditions; final inventory exactly 0.000."
+    },
+    {
+      "req_id": "NFR-03",
+      "title": "Security & Credential Isolation",
+      "prd_section": "8.3",
+      "description": "Zero secrets exposed to frontend, 401 on protected endpoints, customer-merchant boundary enforcement",
+      "test_file": "tests/integration/test_auth_isolation_recovery.py",
+      "test_functions": [
+        "test_unauthenticated_requests_to_merchant_endpoints_return_401",
+        "test_invalid_bearer_token_rejected_with_401",
+        "test_customer_cannot_call_merchant_actions",
+        "test_zero_server_secrets_in_frontend_bundle"
+      ],
+      "verification_evidence": "10 protected endpoints reject unauthenticated calls with 401; zero NEXT_PUBLIC server secrets in frontend."
+    }
+  ]
+}
