@@ -54,9 +54,11 @@ def test_timbre_synthesis(text: str, voice: str = "Nalini", language: str = "hi-
         print("[MOCK SUCCESS] Verified downstream audio playback interface compatibility.")
         return True
 
-    # Attempt official gnani-vachana SDK first
+    # Attempt official gnani-vachana SDK first if installed
     try:
-        from gnani.tts import GnaniTTSClient
+        import importlib
+        gnani_tts = importlib.import_module("gnani.tts")
+        GnaniTTSClient = getattr(gnani_tts, "GnaniTTSClient")
         print("[INFO] Using gnani-vachana SDK...")
         client = GnaniTTSClient(api_key=api_key)
         start_time = time.time()
@@ -77,7 +79,7 @@ def test_timbre_synthesis(text: str, voice: str = "Nalini", language: str = "hi-
                 f.write(bytes(audio_response))
         print(f"[SUCCESS] Saved generated audio to: {output_path}")
         return True
-    except ImportError:
+    except (ImportError, ModuleNotFoundError, AttributeError):
         print("[INFO] gnani-vachana SDK not installed; falling back to direct HTTP REST request...")
     except Exception as e:
         print(f"[WARNING] SDK call error: {e}. Falling back to direct HTTP REST request...")
@@ -125,3 +127,4 @@ def test_timbre_synthesis(text: str, voice: str = "Nalini", language: str = "hi-
 if __name__ == "__main__":
     sample_text = sys.argv[1] if len(sys.argv) > 1 else "Ji, ek kilo chini aur do packet Maggi add kar diye hain. Aapka total ek sau paintalees rupaye hua."
     test_timbre_synthesis(sample_text)
+

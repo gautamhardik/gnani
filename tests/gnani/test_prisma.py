@@ -69,9 +69,11 @@ def test_prisma_transcription(audio_file_path: str, model_version: str = "prisma
         print(f"[ERROR] Audio file not found at: {audio_file_path}")
         return None
 
-    # Attempt official gnani-vachana SDK first
+    # Attempt official gnani-vachana SDK first if installed
     try:
-        from gnani.stt import GnaniSTTClient
+        import importlib
+        gnani_stt = importlib.import_module("gnani.stt")
+        GnaniSTTClient = getattr(gnani_stt, "GnaniSTTClient")
         print("[INFO] Using gnani-vachana SDK...")
         client = GnaniSTTClient(api_key=api_key)
         start_time = time.time()
@@ -80,7 +82,7 @@ def test_prisma_transcription(audio_file_path: str, model_version: str = "prisma
         print(f"[SUCCESS] Latency: {latency_ms:.1f}ms")
         print(f"[TRANSCRIPT] {result.get('transcript', '')}")
         return result
-    except ImportError:
+    except (ImportError, ModuleNotFoundError, AttributeError):
         print("[INFO] gnani-vachana SDK not installed; falling back to direct HTTP REST request...")
     except Exception as e:
         print(f"[WARNING] SDK call error: {e}. Falling back to direct HTTP REST request...")
@@ -122,3 +124,4 @@ def test_prisma_transcription(audio_file_path: str, model_version: str = "prisma
 if __name__ == "__main__":
     audio_arg = sys.argv[1] if len(sys.argv) > 1 else "data/audio/sample_order.wav"
     test_prisma_transcription(audio_arg)
+
