@@ -41,6 +41,13 @@ dist/
 .coverage
 htmlcov/
 *.log
+*.wav
+*.mp3
+tests/**/output_*
+tests/**/*_result.json
+scratch/
+tmp/
+temp/
 
 # OS / IDE
 .DS_Store
