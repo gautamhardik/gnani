@@ -64,3 +64,4 @@ def get_current_merchant_profile(
         store_id=settings.DEMO_STORE_ID,
         merchant_name=store_name
     )
+

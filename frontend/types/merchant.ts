@@ -138,3 +138,4 @@ export interface PaginatedResponse<T> {
   size: number;
   has_more: boolean;
 }
+

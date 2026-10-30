@@ -22,3 +22,4 @@ class MerchantOverviewResponse(BaseModel):
     total_products_count: int
     recent_orders: List[OrderResponse] = []
     generated_at: datetime
+

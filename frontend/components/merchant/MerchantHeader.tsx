@@ -82,3 +82,4 @@ export function MerchantHeader({
     </header>
   );
 }
+

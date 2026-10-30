@@ -118,3 +118,4 @@ def get_merchant_overview(
         recent_orders=recent_orders,
         generated_at=now_utc
     )
+

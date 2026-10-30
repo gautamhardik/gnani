@@ -372,3 +372,4 @@ export function InventoryTab({
     </div>
   );
 }
+

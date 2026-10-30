@@ -218,18 +218,22 @@ async def process_voice_turn(
 
     # 8. Text-to-Speech: Gnani Timbre (Task 7 & 9)
     tts_service = TimbreTTSService(force_mock=force_mock)
-    tts_res = tts_service.synthesize(text=assistant_text)
-    tts_ms = tts_res.latency_ms
-
-    audio_status = "generated" if tts_res.success else "failed"
-    audio_url = f"/api/v1/voice/audio/{tts_res.audio_id}" if tts_res.success else None
-    warning_msg = None
-    if not tts_res.success:
-        warning_msg = f"Audio generation unavailable: {tts_res.error_message}"
-
-    audio_b64 = None
-    if include_audio_base64 and tts_res.success and tts_res.audio_bytes:
-        audio_b64 = base64.b64encode(tts_res.audio_bytes).decode("utf-8")
+    try:
+        tts_res = tts_service.synthesize(text=assistant_text)
+        tts_ms = tts_res.latency_ms
+        audio_status = "generated" if tts_res.success else "failed"
+        audio_url = f"/api/v1/voice/audio/{tts_res.audio_id}" if tts_res.success else None
+        warning_msg = None if tts_res.success else f"Audio generation unavailable: {tts_res.error_message}"
+        audio_b64 = None
+        if include_audio_base64 and tts_res.success and tts_res.audio_bytes:
+            audio_b64 = base64.b64encode(tts_res.audio_bytes).decode("utf-8")
+    except Exception as e:
+        logger.warning(f"TTS synthesis failed gracefully: {e}")
+        tts_ms = 0.0
+        audio_status = "failed"
+        audio_url = None
+        warning_msg = f"Audio generation unavailable: {e}"
+        audio_b64 = None
 
     total_turn_ms = (time.time() - turn_start_time) * 1000
 

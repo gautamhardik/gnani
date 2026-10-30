@@ -163,3 +163,4 @@ describe("Merchant API Client Tests", () => {
     expect(res.stock_quantity).toBe(35);
   });
 });
+

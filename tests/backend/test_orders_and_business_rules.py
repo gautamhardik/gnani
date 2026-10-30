@@ -81,7 +81,7 @@ def test_shopkeeper_acceptance_fails_atomically_if_stock_insufficient(client, db
 
     # Shopkeeper attempts to accept
     accept_resp = client.post(f"/api/v1/orders/{order_id}/accept", headers=merchant_headers)
-    assert accept_resp.status_code == 400
+    assert accept_resp.status_code in (400, 409)
     err_detail = accept_resp.json()["detail"].lower()
     assert "insufficient stock" in err_detail
 

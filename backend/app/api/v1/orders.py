@@ -139,7 +139,8 @@ def list_orders(
     size: int = Query(20, ge=1, le=100),
     order_status: Optional[str] = Query(None, alias="status"),
     store_id: str = settings.DEMO_STORE_ID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: bool = Depends(get_current_merchant)
 ):
     """Lists orders with status filter (Merchant Dashboard Feed)."""
     query = (
@@ -201,8 +202,8 @@ def accept_order(
     """
     order = (
         db.query(Order)
-        .options(joinedload(Order.items))
         .filter(Order.order_id == order_id)
+        .with_for_update()
         .first()
     )
     if not order:
@@ -213,13 +214,19 @@ def accept_order(
 
     if order.status != "pending":
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail=f"Only orders in 'pending' status can be accepted. Current status: '{order.status}'"
         )
 
-    # Atomic stock recheck and deduction
-    for item in order.items:
-        inv = db.query(StoreInventory).filter(StoreInventory.product_id == item.product_id).with_for_update().first()
+    # Atomic stock recheck and deduction ordered by product_id to prevent deadlock
+    sorted_items = sorted(order.items, key=lambda x: x.product_id)
+    for item in sorted_items:
+        inv = (
+            db.query(StoreInventory)
+            .filter(StoreInventory.product_id == item.product_id)
+            .with_for_update()
+            .first()
+        )
         if not inv:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -228,7 +235,7 @@ def accept_order(
 
         if inv.stock_quantity < item.quantity:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_409_CONFLICT,
                 detail=f"Insufficient stock for '{item.product_name_snapshot}': requested {item.quantity}, available {inv.stock_quantity}. Cannot accept order."
             )
 

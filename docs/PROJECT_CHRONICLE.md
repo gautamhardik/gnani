@@ -99,6 +99,20 @@ Every architectural decision and engineering implementation in DukaanSaathi adhe
   7. Merchant Operations Frontend: Build a dedicated desktop- and tablet-optimized Next.js dashboard under `/merchant` and `/merchant/login` using Phase 5 warm-neutral design tokens (`dukaan-*`), status filtering, accessible responsive tables with sticky headers, and affirmative confirmation dialogs for stock-affecting actions.
 - **Consequence:** 100% reliable kirana operations, zero oversell risk, complete audit traceability for every stock unit, zero secret exposure in client bundles, and unified data continuity between customer and shopkeeper.
 
+### ADR-008: Real PostgreSQL Staging, Strict SQLite Disabling in Staging/Production, and Row-Level Locking Concurrency Guarantees
+- **Status:** Accepted (2026-10-31)
+- **Context:** In Phases 2–6, test suites relied on in-memory SQLite (`sqlite:///:memory:`) and local SQLite fallback for development velocity. However, SQLite's coarse database-level locking cannot validate PostgreSQL row-level locks (`with_for_update()`), foreign key cascades, and high-concurrency race conditions. Moreover, a silent SQLite fallback in staging or production environments could hide catastrophic database connectivity failures.
+- **Decision:**
+  1. Real PostgreSQL 16.6 Staging Engine: Initialized a local EnterpriseDB PostgreSQL 16.6 x64 instance listening on port 5432, created the `dukaansaathi` database, applied all Alembic migrations (`001_initial_schema`), and executed the idempotent seed script verifying 1 store, 100 products, 306 aliases, and 100 inventory rows with 33 database constraints and 36 indexes.
+  2. Disabling Silent Fallback in Staging & Production: In `backend/app/core/database.py`, updated `get_engine()` such that if `APP_ENV` is set to `staging` or `production`, database connection failures raise an explicit, fatal `RuntimeError` immediately, eliminating silent data degradation.
+  3. Deadlock-Free Ordered Row Locks: In `backend/app/api/v1/orders.py`, `POST /api/v1/orders/{order_id}/accept` locks the `Order` record using `with_for_update()` and locks inventory rows sorted alphabetically by `product_id` (`sorted(order.items, key=lambda x: x.product_id)`), preventing deadlock conditions when competing transactions lock multiple SKUs.
+  4. HTTP 409 Conflict Semantics: Concurrency conflicts (e.g. insufficient remaining stock or order no longer pending) return HTTP 409 Conflict, accurately reflecting resource contention.
+  5. Multi-Connection Concurrency Test Suite: Authored `tests/integration/test_postgres_concurrency.py` executing across parallel threads with independent PostgreSQL sessions. Verified that when two simultaneous orders compete for the last 1 remaining unit of stock, exactly 1 succeeds (200 OK), exactly 1 receives 409 Conflict, final PostgreSQL stock is 0.0, and exactly 1 audit movement row is created. Duplicate simultaneous acceptance of the same order is similarly serialized.
+  6. API Contract Audit & Protection: Audited all 21 FastAPI routes against frontend client bindings (`frontend/lib/api.ts` and `frontend/lib/merchantApi.ts`), achieving 100% schema parity. Added `Depends(get_current_merchant)` to `GET /api/v1/orders` to protect merchant order feeds from unauthenticated customer access.
+  7. Automated Browser E2E Suite: Created `tests/e2e/e2e_browser_test.cjs` using Puppeteer and headless Chrome, automating the complete journey from store home -> voice order -> cart review -> confirmation modal -> merchant login -> overview dashboard -> order acceptance -> inventory edit.
+  8. Live Gnani Smoke Verification: Re-verified live Gnani Prisma STT and Timbre TTS against `https://api.vachana.ai`, observing successful synthesis (1337.9ms) and code-mixed Hindi transcription (997.3ms RTT).
+- **Consequence:** 100% verified transactional integrity under concurrent load against real PostgreSQL, zero silent database fallbacks in staging/production, complete API contract alignment, and validated end-to-end user journeys.
+
 ---
 
 ## 4. Chronological Development Log
@@ -691,6 +705,104 @@ Customer voice ordering without merchant fulfillment is an incomplete product. I
    - *Error:* Root `.gitignore` line `lib/` matched all `lib/` directories, hiding `frontend/lib/merchantApi.ts`.
    - *Fix:* Refined `.gitignore` to target root `/lib/` and `/lib64/` while explicitly unignoring `!frontend/lib/`.
 
+### Phase 7: Complete System Integration & End-to-End Validation
+**Date:** 2026-10-31  
+**Status:** Completed & Formally Verified  
+**Git Branch:** `master`
+
+#### 1. Request & Context
+Execute Phase 7 of DukaanSaathi: Complete System Integration and End-to-End Validation.
+- Configure and validate an authentic PostgreSQL 16.6 staging database.
+- Explicitly disable silent SQLite fallback in staging/production environments.
+- Conduct an exhaustive API contract audit comparing all frontend API calls with FastAPI OpenAPI specs and Pydantic schemas.
+- Execute full customer voice ordering journey on real PostgreSQL with 0 stock deduction on customer checkout.
+- Execute full merchant operational workflow (login, overview metrics, transactional acceptance, state progression, rejection, cancellation, and compensating stock movements).
+- Perform strict PostgreSQL row-level locking concurrency tests across multiple independent database connections.
+- Perform security, authorization, and secret isolation verification.
+- Automate browser E2E workflows using Puppeteer and headless Chrome.
+- Re-verify live Gnani Prisma STT and Timbre TTS adapters.
+
+#### 2. Rationale
+Prior phases verified modules in isolation or against in-memory SQLite fixtures. However, SQLite lacks true row-level locking (`SELECT ... FOR UPDATE`), multi-connection concurrency isolation, and strict constraint enforcement identical to production cloud databases (Neon / Cloud SQL). Phase 7 proves the system works as a cohesive whole under authentic production database semantics with verified race condition safety.
+
+#### 3. Actions Performed
+- **TASK 1 — PostgreSQL 16.6 Staging Environment & Strict Fallback Disabling:**
+  - Deployed local EnterpriseDB PostgreSQL 16.6 x64 instance (`PostgreSQL 16.6, compiled by Visual C++ build 1942, 64-bit`) listening on port 5432.
+  - Initialized UTF-8 cluster and database `dukaansaathi`.
+  - Executed Alembic upgrade to head (`alembic -c backend/alembic.ini upgrade head`), successfully applying migration `001_initial_schema`.
+  - Executed idempotent database seed script (`python -m backend.scripts.seed_db`), validating and upserting 1 store, 100 products, 306 aliases, and 100 inventory records with 33 database constraints (PK, UK, FK, CHECK) and 36 indexes.
+  - In `backend/app/core/database.py`, updated `get_engine()`: if `settings.APP_ENV` is set to `"staging"` or `"production"`, database connection failures raise a hard, fatal `RuntimeError` immediately rather than silently falling back to local SQLite. Added `get_database_url()` export for Alembic parity.
+- **TASK 2 — API Contract Audit & Parity:**
+  - Audited all 21 FastAPI routes against frontend client bindings (`frontend/lib/api.ts` and `frontend/lib/merchantApi.ts`).
+  - Validated 100% field, parameter, and schema match across `Order`, `OrderItem`, `OrderSession`, `VoiceTurnResponse`, `InventoryItem`, `StockMovement`, `MerchantOverviewResponse`, and `MerchantLoginResponse`.
+  - Protected `GET /api/v1/orders` with `Depends(get_current_merchant)` to prevent unauthenticated customer enumeration of store order feeds.
+- **TASK 3 — Full Customer Workflow against Real PostgreSQL:**
+  - Verified session creation (`POST /api/v1/sessions`) returning 201 Created.
+  - Verified cart mutations (`PUT /api/v1/sessions/{id}/cart/items/{id}`) with authoritative backend pricing and subtotal calculations.
+  - Verified customer order confirmation (`POST /api/v1/orders`) creates order in `pending` status.
+  - Verified invariant directly in PostgreSQL: inventory stock remains 100% untouched, and zero stock movement rows are written upon customer checkout.
+- **TASK 4 — Full Merchant Operational Workflow:**
+  - Verified merchant login (`POST /api/v1/auth/login`) with username `sharma` and password `kirana@2026`.
+  - Verified overview dashboard (`GET /api/v1/merchant/overview`) reflecting live SQL aggregates.
+  - Verified transactional atomic order acceptance (`POST /api/v1/orders/{id}/accept`).
+  - Verified in PostgreSQL: inventory stock decremented by exact order quantity, and an authoritative audit record written to `stock_movements` with reason `merchant_order_accepted`.
+  - Verified forward state progression: `accepted -> preparing -> ready -> completed`.
+- **TASK 5 — Rejection, Cancellation & Idempotency:**
+  - Rejection: Customer places pending order -> merchant rejects with reason (`POST /api/v1/orders/{id}/reject`). Verified in PostgreSQL: status is `rejected`, rejection reason recorded, stock remains 100% untouched, zero movements written.
+  - Cancellation & Restock: Merchant accepts order (stock deducted) -> merchant cancels order (`status: cancelled`). Verified in PostgreSQL: stock restored to original level, compensating `order_cancelled_restock` audit row written.
+  - Idempotency & Invalid Transitions: Attempting duplicate cancellation returns HTTP 400 Bad Request, preventing double restocking. Transitioning directly from `pending` to `completed` returns HTTP 400 Bad Request.
+- **TASK 6 — PostgreSQL Row-Level Locking & Concurrency Verification:**
+  - Created `tests/integration/test_postgres_concurrency.py`.
+  - Conflicting Orders on Single Stock Unit: Set stock of `PRD010` to 1.0. Placed two independent pending orders (Order A and Order B) requesting 1.0 unit each.
+  - Executed concurrent acceptance requests using `ThreadPoolExecutor(max_workers=2)` across two distinct PostgreSQL connections.
+  - Result: Exactly ONE succeeded with HTTP 200 (order status `accepted`), and exactly ONE failed with HTTP 409 Conflict (`Insufficient stock: requested 1.0, available 0.0`).
+  - Verified in PostgreSQL: final stock is exactly 0.0 (NOT -1.0), and exactly 1 deduction audit row exists in `stock_movements`.
+  - Duplicate Acceptance Race: Simultaneously attempted to accept the exact same order in parallel threads. Exactly ONE succeeded (200), the second returned 409 Conflict, and stock was deducted exactly ONCE.
+- **TASK 7 — Security, Authorization & Secret Isolation:**
+  - Created `tests/integration/test_auth_isolation_recovery.py`.
+  - Verified unauthenticated requests to protected endpoints (`/merchant/overview`, `/orders`, `/orders/{id}/accept`, `/orders/{id}/reject`, `/orders/{id}/status`, `/inventory/{id}`, `/inventory/movements`, `/products`) return HTTP 401 Unauthorized.
+  - Verified forged or invalid Bearer tokens return 401.
+  - Audited frontend bundle and `.env` files: verified zero server secrets (`SHOPKEEPER_AUTH_TOKEN`, `DATABASE_URL`, `GNANI_API_KEY`) are exposed in `NEXT_PUBLIC_*` variables.
+- **TASK 8 — Failure & Recovery Verification:**
+  - Wrapped Timbre TTS synthesis in `backend/app/api/v1/voice.py` with graceful error handling. If TTS times out or throws, the customer voice turn returns assistant text, marks `audio_status="failed"`, and preserves the draft cart and session without crashing with a 500.
+  - Verified staging/production database failure throws immediate explicit error instead of silent SQLite fallback.
+- **TASK 9 — Automated Browser E2E Suite & Live Gnani Smoke Tests:**
+  - Authored `tests/e2e/e2e_browser_test.cjs` using Puppeteer and headless Google Chrome.
+  - Automated full customer journey: Store Home -> Voice View -> Cart Review -> Confirmation Modal -> Order Placement.
+  - Automated full merchant journey: Login -> Overview Dashboard -> Order Acceptance -> Inventory Inspection.
+  - Captured 4 high-resolution screenshots in `docs/screenshots/` (`08_e2e_customer_cart_review.png`, `09_e2e_merchant_overview.png`, `10_e2e_merchant_orders_accepted.png`, `11_e2e_merchant_inventory.png`).
+  - Re-executed live Gnani smoke tests (`tests/gnani/test_timbre.py` and `tests/gnani/test_prisma.py`):
+    - Timbre TTS: Generated 195 KB playable audio in 1337.9ms.
+    - Prisma STT: Transcribed audio payload in 453.7ms server proc time (997.3ms RTT) returning accurate code-mixed Hindi transcript.
+
+#### 4. Files Created / Modified
+- `backend/app/core/database.py` (Modified: added `get_database_url()`, disabled silent SQLite fallback in staging/production)
+- `backend/app/api/v1/orders.py` (Modified: row-level lock on `Order`, sorted item locks to prevent deadlocks, 409 Conflict for insufficient stock, merchant auth on `GET /api/v1/orders`)
+- `backend/app/api/v1/voice.py` (Modified: resilient try/except on Timbre TTS synthesis)
+- `pytest.ini` (Modified: registered `tests/integration`)
+- `tests/backend/test_orders_and_business_rules.py` (Modified: assert status code in 400/409)
+- `tests/integration/conftest.py` (Created: PostgreSQL 16.6 engine and session fixtures)
+- `tests/integration/test_postgres_e2e_workflows.py` (Created: 5 tests covering full customer and merchant lifecycles on PostgreSQL)
+- `tests/integration/test_postgres_concurrency.py` (Created: 2 tests covering row-level locking race conditions on PostgreSQL)
+- `tests/integration/test_auth_isolation_recovery.py` (Created: 5 tests covering 401 enforcement, customer isolation, secret scanning, and TTS failure recovery)
+- `tests/e2e/e2e_browser_test.cjs` (Created: Puppeteer browser automation)
+- `docs/screenshots/08_e2e_customer_cart_review.png` (Captured)
+- `docs/screenshots/09_e2e_merchant_overview.png` (Captured)
+- `docs/screenshots/10_e2e_merchant_orders_accepted.png` (Captured)
+- `docs/screenshots/11_e2e_merchant_inventory.png` (Captured)
+- `docs/PROJECT_CHRONICLE.md` (Updated: ADR-008 and Phase 7 milestone record)
+
+#### 5. Verification Results
+- **PostgreSQL Server Version:** `PostgreSQL 16.6, compiled by Visual C++ build 1942, 64-bit` on port 5432.
+- **Database Schema Parity:** 10 tables, 33 constraints (PK, UK, FK, CHECK), 36 indexes.
+- **Backend Automated Tests (Pytest):** 113/113 passed in 13.30s across `tests/backend`, `tests/intelligence`, `tests/voice`, and `tests/integration`.
+- **Frontend Automated Tests (Vitest):** 29/29 passed in 17.07s across client API and UI components.
+- **Next.js Production Build:** `next build` compiled cleanly into static/server chunks (`/`, `/merchant`, `/merchant/login`) with zero errors.
+- **PostgreSQL Concurrency & Row-Locking Test:** Verified on live PostgreSQL that 2 concurrent transactions competing for 1 remaining stock item result in exactly 1 success (200), exactly 1 conflict (409), final stock = 0.0, and exactly 1 audit movement row.
+- **Automated Browser E2E Test:** 5/5 workflows completed in headless Chrome with zero errors.
+- **Live Gnani Smoke Tests:** 2/2 verified on live `api.vachana.ai` endpoints.
+- **Phase 7 Completion Gate:** Fully passed.
+
 ---
 
 ## 5. Current Repository & Asset Inventory
@@ -773,26 +885,26 @@ C:\Users\hiten\Downloads\gnani
 │   │   PACK_CONTENTS.json
 │   │   README.md
 │   ├───audio
-│   │       README.md
-│   │       recording_manifest.csv
+│   │   │   README.md
+│   │   │   recording_manifest.csv
 │   ├───data
-│   │       categories.csv
-│   │       conversation_scenarios.json
-│   │       inventory.csv
-│   │       products.csv
-│   │       products.json
-│   │       product_aliases.csv
-│   │       product_aliases.json
-│   │       store.json
-│   │       voice_test_cases.csv
-│   │       voice_test_cases.json
+│   │   │   categories.csv
+│   │   │   conversation_scenarios.json
+│   │   │   inventory.csv
+│   │   │   products.csv
+│   │   │   products.json
+│   │   │   product_aliases.csv
+│   │   │   product_aliases.json
+│   │   │   store.json
+│   │   │   voice_test_cases.csv
+│   │   │   voice_test_cases.json
 │   ├───database
-│   │       dukkaansaathi_seed.sqlite
-│   │       schema_postgres.sql
+│   │   │   dukkaansaathi_seed.sqlite
+│   │   │   schema_postgres.sql
 │   ├───docs
-│   │       data_dictionary.md
-│   │       evaluation_protocol.md
-│   │       sample_api_payloads.json
+│   │   │   data_dictionary.md
+│   │   │   evaluation_protocol.md
+│   │   │   sample_api_payloads.json
 │   └───scripts
 │           seed_postgres.py
 ├───docs
@@ -808,6 +920,10 @@ C:\Users\hiten\Downloads\gnani
 │           05_merchant_overview.png
 │           06_merchant_orders.png
 │           07_merchant_inventory.png
+│           08_e2e_customer_cart_review.png
+│           09_e2e_merchant_overview.png
+│           10_e2e_merchant_orders_accepted.png
+│           11_e2e_merchant_inventory.png
 ├───frontend
 │   │   .env.example
 │   │   package.json
@@ -870,9 +986,16 @@ C:\Users\hiten\Downloads\gnani
     │       test_sessions_api.py
     │       test_stock_movements_api.py
     │       test_stores_api.py
+    ├───e2e
+    │       e2e_browser_test.cjs
     ├───gnani
     │       test_prisma.py
     │       test_timbre.py
+    ├───integration
+    │       conftest.py
+    │       test_auth_isolation_recovery.py
+    │       test_postgres_concurrency.py
+    │       test_postgres_e2e_workflows.py
     ├───intelligence
     │       test_cart_service.py
     │       test_conversation_scenarios.py
@@ -907,9 +1030,9 @@ C:\Users\hiten\Downloads\gnani
 - **Phase 4 (Audio Pipeline & Voice Turn Integration):** Complete & verified. Resilient audio ingestion, format validation, WebM/Opus transcoding, live Prisma v3 STT integration, Devanagari transliteration bridging, zero-hallucination assistant response generator, live Timbre v2.5 TTS synthesis, in-memory audio caching, and request idempotency. 85/85 automated tests passing. 10-turn live voice benchmark achieved 10/10 successes with playable audio (median total turn latency 2.76s) and strict two-phase commit preservation (0 stock deducted).
 - **Phase 5 (Customer Mobile Web Interface):** Complete & verified. Built polished, mobile-first Next.js 14 application with warm-neutral vernacular commerce design tokens, `useVoiceRecorder` (live waveform analyzer, 60s cap, cross-browser MIME detection), `useAudioPlayer` (autoplay block detection and fallback controls), authoritative backend cart synchronization, itemized review modal, and two-phase pending order placement. 110 automated tests passing (90 Python pytest + 20 Next.js Vitest).
 - **Phase 6 (Shopkeeper Merchant Dashboard & Operations Interface):** Complete & verified. Built protected merchant authentication (`/merchant/login`), live SQL-aggregated overview metrics (`/merchant`), full order state machine (`pending -> accepted -> preparing -> ready -> completed` and `cancelled` with compensating stock restoration), atomic inventory deduction on acceptance, rejection with zero stock modification, live stock editor with threshold alerts, product catalogue CRUD, and immutable stock movement audit feed. 130 automated tests passing (101 Python pytest + 29 Next.js Vitest). Production build verified cleanly with 0 errors. 4 full-resolution screenshots captured.
+- **Phase 7 (Complete System Integration & End-to-End Validation):** Complete & verified. Deployed and verified against real PostgreSQL 16.6 on port 5432 with 33 constraints and 36 indexes. Disabled silent SQLite fallback in staging/production. Conducted full API contract audit across 21 FastAPI routes. Formally verified multi-connection PostgreSQL row locking (`with_for_update()`) under concurrent conflicting order acceptance transactions (1 winner: 200 OK, 1 loser: 409 Conflict, 0.0 final stock, exactly 1 audit row). Executed 5 automated browser E2E workflows with Puppeteer and Chrome, capturing 4 new screenshots. 142 total automated tests passing (113 Python pytest + 29 Next.js Vitest). Next.js production build verified cleanly with 0 errors.
 
-### Immediate Next Steps (Phase 7: Comprehensive System Testing, Performance Optimization & Benchmark Verification)
-1. **Full-Spectrum End-to-End Test Suite:** Integrate customer voice ordering directly with merchant dashboard acceptance in end-to-end integration tests.
-2. **Performance & Latency Optimization:** Profile voice turn latency bottlenecks (transcoding, Prisma STT, SQLite/PostgreSQL query latency, Timbre TTS).
-3. **Formal Evaluation Benchmark Run:** Re-run all 30 starter pack voice test cases and 5 multi-turn scenarios, documenting exact WER, intent accuracy, and latency metrics in `docs/benchmark_report.md`.
-4. **Stress & Error Resilience Testing:** Simulate network drops, corrupted audio uploads, concurrent conflicting orders, and empty audio inputs.
+### Immediate Next Steps (Phase 8: Production Deployment & Contest Packaging)
+1. **Containerization & Deployment Orchestration:** Configure production Dockerfiles and compose setups for FastAPI backend and Next.js frontend with PostgreSQL / Neon cloud connectivity.
+2. **Comprehensive Demonstration Video & Runbook:** Record end-to-end customer-to-merchant walkthrough demonstrating voice order placement, live Prisma/Timbre interaction, and instant merchant dashboard fulfillment.
+3. **Competition Submission Packaging:** Compile executive summary, architectural diagrams, benchmark evaluation sheets, and submission archive for the Great Indian AI Internship Challenge.

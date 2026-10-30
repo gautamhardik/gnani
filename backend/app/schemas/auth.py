@@ -18,3 +18,4 @@ class MerchantMeResponse(BaseModel):
     authenticated: bool
     store_id: str
     merchant_name: str
+

@@ -308,3 +308,4 @@ export async function listStockMovements(
   });
   return handleResponse<PaginatedResponse<StockMovement>>(res);
 }
+
