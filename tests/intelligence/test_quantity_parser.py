@@ -109,3 +109,4 @@ def test_milk_pouch_volume_conversion(db_session):
     sell_2l, _, err_2l = QuantityParser.resolve_package_quantity(p, qty_2l)
     assert err_2l is None
     assert sell_2l == Decimal("4")
+

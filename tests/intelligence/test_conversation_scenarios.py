@@ -80,3 +80,4 @@ def test_benchmark_all_5_conversation_scenarios(db_session, conversation_scenari
     print(f"=============================================================\n")
 
     assert scenarios_passed == len(conversation_scenarios)
+

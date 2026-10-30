@@ -45,3 +45,4 @@ class InventoryService:
         """Retrieves authoritative product unit price from PostgreSQL/SQLite."""
         prod = self.get_product_details(product_id)
         return Decimal(str(prod.price_inr)) if prod else None
+

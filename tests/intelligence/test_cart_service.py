@@ -68,3 +68,4 @@ def test_clear_cart():
     cart.clear()
     assert len(cart.get_items()) == 0
     assert cart.calculate_total() == Decimal("0.00")
+

@@ -1,0 +1,229 @@
+{
+  "date": "2026-10-30",
+  "total_cases": 10,
+  "median_total_ms": 2755.6,
+  "p95_total_ms": 12131.2,
+  "stock_invariant_preserved": true,
+  "cases": [
+    {
+      "case_id": "VOICE_LIVE_001",
+      "category": "staples_bulk",
+      "format": "webm",
+      "spoken_text": "Mujhe ek kilo aata chahiye.",
+      "transcript": "मुझे एक किलो आटा चाहिए।",
+      "intent": "add_items",
+      "action": "add_items",
+      "cart_count": 1,
+      "cart_total": 42.0,
+      "assistant_text": "Ji bhaiya, ek kilo Loose Wheat Flour (Atta) add kar diye hain. Total 42 rupaye hua. Kuch aur chahiye?",
+      "audio_status": "generated",
+      "audio_delivery_verified": true,
+      "latency_ms": {
+        "upload_ms": 0.01,
+        "preprocessing_ms": 414.34,
+        "stt_ms": 409.15,
+        "intelligence_ms": 23.93,
+        "tts_ms": 1524.31,
+        "total_ms": 2380.96
+      }
+    },
+    {
+      "case_id": "VOICE_LIVE_002",
+      "category": "compound_order",
+      "format": "webm",
+      "spoken_text": "Bhaiya ek kilo chini aur do packet Maggi dena.",
+      "transcript": "भैया एक किलो चीनी और दो पैकेट मैगी देना।",
+      "intent": "add_items",
+      "action": "add_items",
+      "cart_count": 3,
+      "cart_total": 116.0,
+      "assistant_text": "Ji bhaiya, ek kilo Loose Sugar aur 2 packet Maggi Masala Noodles 70 g add kar diye hain. Total 116 rupaye hua. Kuch aur chahiye?",
+      "audio_status": "generated",
+      "audio_delivery_verified": true,
+      "latency_ms": {
+        "upload_ms": 0.01,
+        "preprocessing_ms": 207.03,
+        "stt_ms": 495.01,
+        "intelligence_ms": 10.69,
+        "tts_ms": 1771.29,
+        "total_ms": 2488.97
+      }
+    },
+    {
+      "case_id": "VOICE_LIVE_003",
+      "category": "code_mixed_dairy",
+      "format": "wav",
+      "spoken_text": "One packet Parle-G aur half litre Amul milk add kar do.",
+      "transcript": "one packet pearl G और half litre Amul milk add कर दो।",
+      "intent": "add_items",
+      "action": "clarify_size",
+      "cart_count": 4,
+      "cart_total": 126.0,
+      "assistant_text": "Kaunsa product chahiye? Options: Amul Taaza Milk 500 ml Pouch (₹29.00), Amul Gold Milk 500 ml Pouch (₹34.00)",
+      "audio_status": "generated",
+      "audio_delivery_verified": true,
+      "latency_ms": {
+        "upload_ms": 0.02,
+        "preprocessing_ms": 0.15,
+        "stt_ms": 508.53,
+        "intelligence_ms": 203.26,
+        "tts_ms": 2035.91,
+        "total_ms": 2755.63
+      }
+    },
+    {
+      "case_id": "VOICE_LIVE_004",
+      "category": "vernacular_grain",
+      "format": "webm",
+      "spoken_text": "Aadha kilo gehun ka aata de do.",
+      "transcript": "आधा किलो गेहूँ का आटा दे दो।",
+      "intent": "add_items",
+      "action": "add_items",
+      "cart_count": 4,
+      "cart_total": 147.0,
+      "assistant_text": "Ji bhaiya, 1.5 kilo Loose Wheat Flour (Atta) add kar diye hain. Total 147 rupaye hua. Kuch aur chahiye?",
+      "audio_status": "generated",
+      "audio_delivery_verified": true,
+      "latency_ms": {
+        "upload_ms": 0.01,
+        "preprocessing_ms": 364.6,
+        "stt_ms": 751.69,
+        "intelligence_ms": 22.39,
+        "tts_ms": 1680.71,
+        "total_ms": 2823.12
+      }
+    },
+    {
+      "case_id": "VOICE_LIVE_005",
+      "category": "fractional_metric",
+      "format": "wav",
+      "spoken_text": "250 gram chini dena.",
+      "transcript": "दो सौ पचास ग्राम चीनी देना।",
+      "intent": "add_items",
+      "action": "add_items",
+      "cart_count": 4,
+      "cart_total": 151.6,
+      "assistant_text": "Ji bhaiya, 1.1 kilo Loose Sugar add kar diye hain. Total 151.6 rupaye hua. Kuch aur chahiye?",
+      "audio_status": "generated",
+      "audio_delivery_verified": true,
+      "latency_ms": {
+        "upload_ms": 0.02,
+        "preprocessing_ms": 0.09,
+        "stt_ms": 1134.9,
+        "intelligence_ms": 61.7,
+        "tts_ms": 1192.97,
+        "total_ms": 2423.58
+      }
+    },
+    {
+      "case_id": "VOICE_LIVE_006",
+      "category": "packaged_dairy",
+      "format": "webm",
+      "spoken_text": "Aadha litre Amul Taaza doodh.",
+      "transcript": "আধা লিটারে আমূল তাজা দুধ।",
+      "intent": "add_items",
+      "action": "product_not_found",
+      "cart_count": 4,
+      "cart_total": 151.6,
+      "assistant_text": "Maaf kijiye, yeh item hamari dukaan mein nahi mila. Kya aap kuch aur lena chahenge?",
+      "audio_status": "generated",
+      "audio_delivery_verified": true,
+      "latency_ms": {
+        "upload_ms": 0.01,
+        "preprocessing_ms": 890.62,
+        "stt_ms": 909.85,
+        "intelligence_ms": 306.45,
+        "tts_ms": 1909.92,
+        "total_ms": 4020.2
+      }
+    },
+    {
+      "case_id": "VOICE_LIVE_007",
+      "category": "dairy_variant",
+      "format": "wav",
+      "spoken_text": "Amul Gold aadha litre dena.",
+      "transcript": "अमूल गोल्ड आधा लीटर देना।",
+      "intent": "add_items",
+      "action": "add_items",
+      "cart_count": 5,
+      "cart_total": 185.6,
+      "assistant_text": "Ji bhaiya, 1 pouch Amul Gold Milk 500 ml Pouch add kar diye hain. Total 185.6 rupaye hua. Kuch aur chahiye?",
+      "audio_status": "generated",
+      "audio_delivery_verified": true,
+      "latency_ms": {
+        "upload_ms": 0.02,
+        "preprocessing_ms": 0.09,
+        "stt_ms": 450.58,
+        "intelligence_ms": 142.51,
+        "tts_ms": 1761.12,
+        "total_ms": 2358.17
+      }
+    },
+    {
+      "case_id": "VOICE_LIVE_008",
+      "category": "intra_utterance_correction",
+      "format": "webm",
+      "spoken_text": "Ek kilo chini... nahi, aadha kilo kar do.",
+      "transcript": "एक किलो चीनी नहीं आधा किलो कर दो।",
+      "intent": "replace_quantity",
+      "action": "add_items",
+      "cart_count": 5,
+      "cart_total": 208.6,
+      "assistant_text": "Ji bhaiya, 1.6 kilo Loose Sugar add kar diye hain. Total 208.6 rupaye hua. Kuch aur chahiye?",
+      "audio_status": "generated",
+      "audio_delivery_verified": true,
+      "latency_ms": {
+        "upload_ms": 0.0,
+        "preprocessing_ms": 231.96,
+        "stt_ms": 488.22,
+        "intelligence_ms": 42.56,
+        "tts_ms": 1108.62,
+        "total_ms": 1875.21
+      }
+    },
+    {
+      "case_id": "VOICE_LIVE_009",
+      "category": "price_query",
+      "format": "wav",
+      "spoken_text": "Amul Taaza aadha litre kitne ka hai?",
+      "transcript": "Amul ताज़ा आधा लीटर कितने का है?",
+      "intent": "quote_price",
+      "action": "quote_price",
+      "cart_count": 5,
+      "cart_total": 208.6,
+      "assistant_text": "Amul Taaza Milk 500 ml Pouch ka daam 29 rupaye per pouch hai.",
+      "audio_status": "generated",
+      "audio_delivery_verified": true,
+      "latency_ms": {
+        "upload_ms": 0.01,
+        "preprocessing_ms": 0.08,
+        "stt_ms": 1634.45,
+        "intelligence_ms": 199.37,
+        "tts_ms": 2740.23,
+        "total_ms": 4578.9
+      }
+    },
+    {
+      "case_id": "VOICE_LIVE_010",
+      "category": "order_confirmation",
+      "format": "webm",
+      "spoken_text": "Haan, order confirm kar do.",
+      "transcript": "हाँ, order confirm कर दो।",
+      "intent": "confirm_order",
+      "action": "confirm_existing_cart",
+      "cart_count": 5,
+      "cart_total": 208.6,
+      "assistant_text": "Aapka order confirm ho gaya hai! Kul 208.6 rupaye. Dukaan-daar jaldi hi aapka samaan pack karenge. Dhanyawad!",
+      "audio_status": "generated",
+      "audio_delivery_verified": true,
+      "latency_ms": {
+        "upload_ms": 0.01,
+        "preprocessing_ms": 9637.83,
+        "stt_ms": 640.84,
+        "intelligence_ms": 26.71,
+        "tts_ms": 1726.89,
+        "total_ms": 12131.24
+      }
+    }
+  ]
+}

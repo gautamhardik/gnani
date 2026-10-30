@@ -66,3 +66,4 @@ def merchant_headers():
     return {
         "Authorization": f"Bearer {settings.SHOPKEEPER_AUTH_TOKEN}"
     }
+

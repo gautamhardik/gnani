@@ -72,3 +72,4 @@ def test_process_turn_nonexistent_store_returns_404(client):
     }
     response = client.post("/api/v1/intelligence/process-turn", json=payload)
     assert response.status_code == 404
+

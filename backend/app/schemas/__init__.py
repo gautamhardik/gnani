@@ -31,6 +31,12 @@ from backend.app.schemas.intelligence import (
     TurnAction,
     TurnResponse,
 )
+from backend.app.schemas.voice import (
+    LatencyBreakdown,
+    CartSnapshot,
+    VoiceTurnResponse,
+    AudioMetadata,
+)
 
 __all__ = [
     "PaginatedResponse",
@@ -62,5 +68,9 @@ __all__ = [
     "CartItem",
     "TurnAction",
     "TurnResponse",
+    "LatencyBreakdown",
+    "CartSnapshot",
+    "VoiceTurnResponse",
+    "AudioMetadata",
 ]
 

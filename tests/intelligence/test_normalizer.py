@@ -31,3 +31,4 @@ def test_intra_utterance_correction_detection():
     raw2 = "Bhaiya ek kilo chini aur do packet Maggi dena."
     norm2 = TranscriptNormalizer.normalize(raw2)
     assert norm2.has_correction is False
+

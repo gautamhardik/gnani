@@ -72,3 +72,4 @@ def test_generic_milk_multiple_turns_preserves_cart(db_session):
     pids = {it.product_id for it in res3.cart}
     assert "PRD001" in pids
     assert "PRD022" in pids
+

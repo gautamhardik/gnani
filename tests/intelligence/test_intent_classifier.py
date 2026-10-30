@@ -80,3 +80,4 @@ def test_add_intent_default():
     for q in queries:
         intent, _ = IntentClassifier.classify_intent(q)
         assert intent == IntentType.ADD, f"Failed for '{q}', got {intent}"
+
