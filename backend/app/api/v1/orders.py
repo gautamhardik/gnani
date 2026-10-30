@@ -19,6 +19,7 @@ from backend.app.schemas import (
     OrderResponse,
     OrderItemResponse,
     OrderRejectRequest,
+    OrderStatusUpdateRequest,
     PaginatedResponse,
 )
 
@@ -254,7 +255,7 @@ def accept_order(
 @router.post("/{order_id}/reject", response_model=OrderResponse)
 def reject_order(
     order_id: str,
-    reject_in: OrderRejectRequest,
+    reject_in: Optional[OrderRejectRequest] = None,
     db: Session = Depends(get_db),
     _: bool = Depends(get_current_merchant)
 ):
@@ -276,9 +277,78 @@ def reject_order(
             detail=f"Only orders in 'pending' status can be rejected. Current status: '{order.status}'"
         )
 
+    reason = reject_in.reason if reject_in and reject_in.reason else "Order rejected by merchant"
     order.status = "rejected"
-    order.rejection_reason = reject_in.reason
+    order.rejection_reason = reason
     db.commit()
     db.refresh(order)
 
+    return order
+
+
+@router.post("/{order_id}/status", response_model=OrderResponse)
+def update_order_status(
+    order_id: str,
+    status_in: OrderStatusUpdateRequest,
+    db: Session = Depends(get_db),
+    _: bool = Depends(get_current_merchant)
+):
+    """
+    Merchant Order Lifecycle Transition Endpoint:
+    Enforces valid state machine transitions:
+    - accepted -> preparing
+    - preparing -> ready
+    - ready -> completed
+    - accepted / preparing / ready -> cancelled (with compensating stock restoration)
+    Rejects invalid transitions (e.g. pending directly to completed).
+    """
+    order = (
+        db.query(Order)
+        .options(joinedload(Order.items))
+        .filter(Order.order_id == order_id)
+        .first()
+    )
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Order '{order_id}' not found"
+        )
+
+    current_status = order.status
+    target_status = status_in.status.lower()
+
+    valid_transitions = {
+        "accepted": ["preparing", "cancelled"],
+        "preparing": ["ready", "cancelled"],
+        "ready": ["completed", "cancelled"],
+    }
+
+    if current_status not in valid_transitions or target_status not in valid_transitions[current_status]:
+        allowed = valid_transitions.get(current_status, [])
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid status transition from '{current_status}' to '{target_status}'. Allowed transitions: {allowed}"
+        )
+
+    # Compensating stock restoration if order was accepted and is now cancelled
+    if target_status == "cancelled" and current_status in ["accepted", "preparing", "ready"]:
+        for item in order.items:
+            inv = db.query(StoreInventory).filter(StoreInventory.product_id == item.product_id).with_for_update().first()
+            if inv:
+                inv.stock_quantity += item.quantity
+                movement = StockMovement(
+                    movement_id=f"MOV{uuid.uuid4().hex[:8].upper()}",
+                    product_id=item.product_id,
+                    order_id=order.order_id,
+                    change_quantity=item.quantity,
+                    reason="order_cancelled_restock"
+                )
+                db.add(movement)
+
+    order.status = target_status
+    if status_in.notes:
+        order.rejection_reason = status_in.notes
+
+    db.commit()
+    db.refresh(order)
     return order

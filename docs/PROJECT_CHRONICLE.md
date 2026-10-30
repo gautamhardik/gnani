@@ -82,6 +82,23 @@ Every architectural decision and engineering implementation in DukaanSaathi adhe
   5. Two-Phase Order Creation: Customer confirmation calls `POST /api/v1/orders`, setting status to `pending` without decrementing inventory.
 - **Consequence:** Clean decoupling, zero client-side price or stock hallucination, 100% accessible mobile experience, and full compatibility across devices.
 
+### ADR-007: Merchant Operational State Machine, Backend-Mediated Authentication, and Atomic Order Lifecycle
+- **Status:** Accepted (2026-10-31)
+- **Context:** In Phase 5, customer order placement was completed, establishing that customer actions exclusively produce `pending` orders with zero inventory deduction. In Phase 6, kirana shopkeepers require an operational interface to review, accept, reject, and progress orders through physical fulfillment stages (`accepted -> preparing -> ready -> completed`) or cancel orders. Several architectural risks exist:
+  1. Frontend token leakage: Storing server secret `SHOPKEEPER_AUTH_TOKEN` in `NEXT_PUBLIC_*` client variables exposes merchant control to anyone inspecting the bundle.
+  2. Inventory race conditions: Multiple concurrent requests or out-of-stock items could cause oversell if order acceptance does not recheck stock atomically.
+  3. Ghost stock decrements: Rejections must guarantee zero stock deduction; cancellations of previously accepted orders must restore stock and log compensating movements.
+  4. Real-time metrics truthfulness: Dashboards frequently suffer from hardcoded mock statistics. Metrics must reflect live database aggregations.
+- **Decision:**
+  1. Backend-Mediated Auth: Implement `POST /api/v1/auth/login` and `GET /api/v1/auth/me` with secure password verification against backend settings (`MERCHANT_USERNAME` and `MERCHANT_PASSWORD`). The client receives a protected bearer token stored in client session storage, never embedded in public build variables.
+  2. Live Operational Overview: Implement `GET /api/v1/merchant/overview` computing live SQL aggregates for pending count, today's order count, completed count, realized INR sales (`sum` of accepted/preparing/ready/completed orders), low-stock count, and recent orders. Never return fabricated numbers.
+  3. Atomic Acceptance & Row Locks: `POST /api/v1/orders/{order_id}/accept` uses `with_for_update()` to re-verify stock for every line item inside a single transaction. If stock is insufficient, it aborts atomically with HTTP 409 Conflict without deducting any item. If sufficient, it deducts stock, sets status to `accepted`, and records `StockMovement` audit rows with reason `order_acceptance`.
+  4. Rejection Invariant: `POST /api/v1/orders/{order_id}/reject` accepts an optional reason, sets status to `rejected`, and guarantees zero inventory modification.
+  5. Strict State Machine Progression: `POST /api/v1/orders/{order_id}/status` enforces valid lifecycle paths: `accepted -> preparing`, `preparing -> ready`, `ready -> completed`, and `accepted/preparing/ready -> cancelled`. Cancellation automatically restores deducted stock and logs a compensating `StockMovement` audit row with reason `order_cancelled_restock`.
+  6. Audit Feed & Inventory Management: Implement `GET /api/v1/inventory/movements` providing an audit trail of stock modifications, alongside `PUT /api/v1/inventory/{product_id}` for manual stock level adjustments.
+  7. Merchant Operations Frontend: Build a dedicated desktop- and tablet-optimized Next.js dashboard under `/merchant` and `/merchant/login` using Phase 5 warm-neutral design tokens (`dukaan-*`), status filtering, accessible responsive tables with sticky headers, and affirmative confirmation dialogs for stock-affecting actions.
+- **Consequence:** 100% reliable kirana operations, zero oversell risk, complete audit traceability for every stock unit, zero secret exposure in client bundles, and unified data continuity between customer and shopkeeper.
+
 ---
 
 ## 4. Chronological Development Log
@@ -553,6 +570,127 @@ Vernacular kirana commerce demands an intuitive, highly accessible mobile touchp
    - *Error:* `next build` failed due to unused variables and `any` types in `api.ts`, `page.tsx`, and component interfaces.
    - *Fix:* Cleaned up unused imports/props and replaced `any` with `unknown` with safe type guards.
 
+### Phase 6: Shopkeeper Merchant Dashboard & Operations Interface
+**Date:** 2026-10-31  
+**Status:** Completed & Validated
+
+#### 1. Request & Context
+Implement Phase 6 of DukaanSaathi: a shopkeeper merchant dashboard and operations management portal inside the existing Next.js frontend (`frontend/`) and FastAPI backend. The portal must provide:
+1. Protected merchant authentication without exposing server tokens in client code.
+2. Real-time overview metrics computed directly from live database models.
+3. Order queue management with status filtering, timestamps, itemized details, and drill-downs.
+4. Transactional atomic order acceptance with row-level stock rechecks and inventory deduction.
+5. Order rejection workflow with reason logging and guaranteed zero inventory modification.
+6. Order lifecycle progression (`accepted -> preparing -> ready -> completed` and cancellation with compensating stock restoration).
+7. Live inventory editor with low-stock alerts and manual adjustments.
+8. Product catalogue CRUD and alias management.
+9. Stock history audit feed tracking all stock changes.
+10. Desktop-optimized and accessible responsive UI using Phase 5 warm-neutral design tokens.
+
+#### 2. Rationale
+Customer voice ordering without merchant fulfillment is an incomplete product. In local Indian kirana commerce, the shopkeeper must retain ultimate control over inventory and acceptance. By coupling atomic database checks with an intuitive vernacular operations dashboard, DukaanSaathi provides a complete commercial workflow.
+
+#### 3. Actions Performed
+1. **Backend Configuration & Schemas:**
+   - Added `MERCHANT_USERNAME` and `MERCHANT_PASSWORD` to `backend/app/core/config.py`.
+   - Created `backend/app/schemas/auth.py` (`MerchantLoginRequest`, `MerchantLoginResponse`, `MerchantMeResponse`).
+   - Created `backend/app/schemas/merchant.py` (`MerchantOverviewResponse`).
+   - Extended `backend/app/schemas/inventory.py` with `StockMovementResponse`.
+   - Extended `backend/app/schemas/order.py` with `OrderStatusUpdateRequest` and made `OrderRejectRequest.reason` optional.
+2. **Backend Routers & Endpoints:**
+   - Implemented `backend/app/api/v1/auth.py` with `POST /api/v1/auth/login` and `GET /api/v1/auth/me`.
+   - Implemented `backend/app/api/v1/merchant.py` with `GET /api/v1/merchant/overview`.
+   - Extended `backend/app/api/v1/orders.py` with `POST /api/v1/orders/{order_id}/status` (enforcing strict state machine transitions and compensating stock restoration upon cancellation).
+   - Extended `backend/app/api/v1/inventory.py` with `GET /api/v1/inventory/movements` (protected stock audit log).
+   - Mounted `auth_router` and `merchant_router` in `backend/app/api/v1/router.py`.
+3. **Backend Test Suite (Pytest):**
+   - Implemented `tests/backend/test_merchant_auth_api.py` (5 tests covering login, bad passwords, bad usernames, valid bearer session introspection, and 401 unauthorized access).
+   - Implemented `tests/backend/test_merchant_order_lifecycle.py` (4 comprehensive tests covering live overview metrics, full lifecycle progression `pending -> accepted -> preparing -> ready -> completed`, invalid transitions rejection, cancellation with compensating inventory restoration, and rejection flow with zero stock deduction).
+   - Implemented `tests/backend/test_stock_movements_api.py` (2 tests covering protected movement listing and product filtering).
+4. **Frontend Architecture & Components:**
+   - Created `frontend/types/merchant.ts` defining strict TypeScript interfaces.
+   - Created `frontend/lib/merchantApi.ts` managing token storage and authenticated API calls.
+   - Fixed root `.gitignore` to prevent unintended omission of `frontend/lib/`.
+   - Created `frontend/app/merchant/login/page.tsx` with approachable login form, error handling, loading states, and accessibility attributes.
+   - Created `frontend/components/merchant/MerchantHeader.tsx` with store branding, live status badge, and taaza/refresh controls.
+   - Created `frontend/components/merchant/OverviewTab.tsx` with live metric cards and recent orders feed.
+   - Created `frontend/components/merchant/OrdersTab.tsx` with filter pills, semantic responsive data table, order drilldown drawer, acceptance confirmation dialog, and rejection reason modal.
+   - Created `frontend/components/merchant/InventoryTab.tsx` with search, stock threshold filters, and quick stock adjustment modal.
+   - Created `frontend/components/merchant/ProductsTab.tsx` with catalogue table, active toggles, and Add/Edit product modals.
+   - Created `frontend/components/merchant/StockHistoryTab.tsx` with stock audit feed and reason badges.
+   - Built main container in `frontend/app/merchant/page.tsx` with tab navigation, badge counters, and global refresh.
+5. **Frontend Testing & Production Build:**
+   - Implemented `frontend/__tests__/merchantApi.test.ts` (6 tests).
+   - Implemented `frontend/__tests__/merchantComponents.test.tsx` (3 tests).
+   - Executed Vitest: 29/29 tests passing.
+   - Executed Next.js Production Build: Compiled cleanly with zero ESLint or TypeScript errors.
+6. **Visual Documentation:**
+   - Captured 4 full-resolution screenshots in `docs/screenshots/`:
+     - `04_merchant_login.png` (Merchant login view)
+     - `05_merchant_overview.png` (Live operational metrics & recent orders)
+     - `06_merchant_orders.png` (Order management queue & drilldown)
+     - `07_merchant_inventory.png` (Live stock editor & threshold alerts)
+   - Adhered strictly to Zero Trash Rule by removing screenshot capture script immediately.
+
+#### 4. Files Created / Modified
+- `backend/app/core/config.py` (Modified)
+- `backend/app/schemas/auth.py` (Created)
+- `backend/app/schemas/merchant.py` (Created)
+- `backend/app/schemas/inventory.py` (Modified)
+- `backend/app/schemas/order.py` (Modified)
+- `backend/app/schemas/__init__.py` (Modified)
+- `backend/app/api/v1/auth.py` (Created)
+- `backend/app/api/v1/merchant.py` (Created)
+- `backend/app/api/v1/inventory.py` (Modified)
+- `backend/app/api/v1/orders.py` (Modified)
+- `backend/app/api/v1/router.py` (Modified)
+- `tests/backend/test_merchant_auth_api.py` (Created: 5 tests)
+- `tests/backend/test_merchant_order_lifecycle.py` (Created: 4 tests)
+- `tests/backend/test_stock_movements_api.py` (Created: 2 tests)
+- `frontend/types/merchant.ts` (Created)
+- `frontend/lib/merchantApi.ts` (Created)
+- `frontend/app/merchant/login/page.tsx` (Created)
+- `frontend/app/merchant/page.tsx` (Created)
+- `frontend/components/merchant/MerchantHeader.tsx` (Created)
+- `frontend/components/merchant/OverviewTab.tsx` (Created)
+- `frontend/components/merchant/OrdersTab.tsx` (Created)
+- `frontend/components/merchant/InventoryTab.tsx` (Created)
+- `frontend/components/merchant/ProductsTab.tsx` (Created)
+- `frontend/components/merchant/StockHistoryTab.tsx` (Created)
+- `frontend/__tests__/merchantApi.test.ts` (Created: 6 tests)
+- `frontend/__tests__/merchantComponents.test.tsx` (Created: 3 tests)
+- `docs/screenshots/04_merchant_login.png` (Captured)
+- `docs/screenshots/05_merchant_overview.png` (Captured)
+- `docs/screenshots/06_merchant_orders.png` (Captured)
+- `docs/screenshots/07_merchant_inventory.png` (Captured)
+- `.gitignore` (Modified: unignored `frontend/lib/`)
+- `docs/PROJECT_CHRONICLE.md` (Updated)
+
+#### 5. Verification Results
+- **Backend Automated Tests (Pytest):** 101/101 passed in 3.43s across all test suites (including 11 new Phase 6 tests).
+- **Frontend Automated Tests (Vitest):** 29/29 passed in 4.72s (including 9 new Phase 6 tests).
+- **Next.js Production Build:** `next build` compiled cleanly into static/server chunks (`/`, `/merchant`, `/merchant/login`) with zero errors.
+- **Two-Phase Commit Invariant:** Verified that customer order confirmation creates `pending` status without stock deduction; verified that shopkeeper acceptance atomically decrements stock with audit logging; verified that cancellation restores stock; verified that rejection modifies 0 stock.
+- **Concurrency Caveat (Truth in Reporting):** Automated backend tests were executed against the in-memory SQLite fixture. While the backend implementation incorporates `with_for_update()` row locking semantics for PostgreSQL, SQLite does not enforce row-level locking. We explicitly note this distinction and do not claim SQLite execution proves multi-connection PostgreSQL row lock concurrency.
+- **Phase 6 Completion Gate:** Fully passed.
+
+#### 6. Errors & Fixes Log
+1. **Pytest Fixtures vs Standalone Client in Backend Tests**:
+   - *Error:* Phase 6 test scripts initially instantiated `TestClient(app)` directly and referenced non-existent `PROD001`, throwing 404 and KeyError on sessions.
+   - *Fix:* Switched to conftest fixtures (`client`, `merchant_headers`, `db_session`) using seeded product IDs (`PRD001`, `PRD002`, `PRD005`) and the canonical `POST /api/v1/orders` endpoint.
+2. **Order Status Update Schema Field Name**:
+   - *Error:* `POST /api/v1/orders/{order_id}/status` threw 422 Unprocessable Content because tests passed `new_status` instead of `status`.
+   - *Fix:* Corrected payload key to `{"status": "preparing"}` and `{"status": "cancelled"}`.
+3. **Next.js Build ESLint Unused Variables & Unescaped Quotes**:
+   - *Error:* `next build` failed due to unused Lucide icons (`Clock`, `RotateCcw`, `Eye`, `TrendingUp`), an unused React import (`useState`), and an unescaped entity in `login/page.tsx`.
+   - *Fix:* Removed all unused imports and replaced entity with `&mdash;`.
+4. **Next.js Dev Server WebSocket in Screenshot Capture**:
+   - *Error:* Puppeteer `networkidle2` timed out because Next.js dev server maintains an active HMR websocket connection.
+   - *Fix:* Switched navigation to `waitUntil: "domcontentloaded"` with explicit selector timeouts.
+5. **Gitignore Root `/lib/` Pattern Inadvertently Masking `frontend/lib/`**:
+   - *Error:* Root `.gitignore` line `lib/` matched all `lib/` directories, hiding `frontend/lib/merchantApi.ts`.
+   - *Fix:* Refined `.gitignore` to target root `/lib/` and `/lib64/` while explicitly unignoring `!frontend/lib/`.
+
 ---
 
 ## 5. Current Repository & Asset Inventory
@@ -579,8 +717,10 @@ C:\Users\hiten\Downloads\gnani
 │   │   │   │   deps.py
 │   │   │   │   __init__.py
 │   │   │   └───v1
+│   │   │           auth.py
 │   │   │           intelligence.py
 │   │   │           inventory.py
+│   │   │           merchant.py
 │   │   │           orders.py
 │   │   │           products.py
 │   │   │           router.py
@@ -603,9 +743,11 @@ C:\Users\hiten\Downloads\gnani
 │   │   │       store.py
 │   │   │       __init__.py
 │   │   ├───schemas
+│   │   │       auth.py
 │   │   │       common.py
 │   │   │       intelligence.py
 │   │   │       inventory.py
+│   │   │       merchant.py
 │   │   │       order.py
 │   │   │       product.py
 │   │   │       store.py
@@ -662,6 +804,10 @@ C:\Users\hiten\Downloads\gnani
 │           01_store_home.png
 │           02_voice_ordering.png
 │           03_cart_view.png
+│           04_merchant_login.png
+│           05_merchant_overview.png
+│           06_merchant_orders.png
+│           07_merchant_inventory.png
 ├───frontend
 │   │   .env.example
 │   │   package.json
@@ -671,27 +817,42 @@ C:\Users\hiten\Downloads\gnani
 │   │   vitest.config.ts
 │   │   test-setup.ts
 │   ├───app
-│   │       globals.css
-│   │       layout.tsx
-│   │       page.tsx
+│   │   │   globals.css
+│   │   │   layout.tsx
+│   │   │   page.tsx
+│   │   └───merchant
+│   │       │   page.tsx
+│   │       └───login
+│   │               page.tsx
 │   ├───components
-│   │       CartView.tsx
-│   │       ConfirmationModal.tsx
-│   │       Header.tsx
-│   │       OrderSuccessView.tsx
-│   │       StoreHomeView.tsx
-│   │       TranscriptList.tsx
-│   │       Waveform.tsx
+│   │   │   CartView.tsx
+│   │   │   ConfirmationModal.tsx
+│   │   │   Header.tsx
+│   │   │   OrderSuccessView.tsx
+│   │   │   StoreHomeView.tsx
+│   │   │   TranscriptList.tsx
+│   │   │   Waveform.tsx
+│   │   └───merchant
+│   │           InventoryTab.tsx
+│   │           MerchantHeader.tsx
+│   │           OrdersTab.tsx
+│   │           OverviewTab.tsx
+│   │           ProductsTab.tsx
+│   │           StockHistoryTab.tsx
 │   ├───hooks
 │   │       useAudioPlayer.ts
 │   │       useVoiceRecorder.ts
 │   ├───lib
 │   │       api.ts
+│   │       merchantApi.ts
 │   ├───types
 │   │       api.ts
+│   │       merchant.ts
 │   └───__tests__
 │           api.test.ts
 │           components.test.tsx
+│           merchantApi.test.ts
+│           merchantComponents.test.tsx
 │           useAudioPlayer.test.ts
 │           useVoiceRecorder.test.ts
 └───tests
@@ -701,10 +862,13 @@ C:\Users\hiten\Downloads\gnani
     │       conftest.py
     │       test_database_models.py
     │       test_inventory_api.py
+    │       test_merchant_auth_api.py
+    │       test_merchant_order_lifecycle.py
     │       test_orders_and_business_rules.py
     │       test_products_api.py
     │       test_seed_validation.py
     │       test_sessions_api.py
+    │       test_stock_movements_api.py
     │       test_stores_api.py
     ├───gnani
     │       test_prisma.py
@@ -742,9 +906,10 @@ C:\Users\hiten\Downloads\gnani
 - **Phase 3 (Core Order Intelligence Engine):** Complete & verified. All 7 services implemented, `POST /api/v1/intelligence/process-turn` operational, 57 automated tests passing in 2.2s. Starter pack benchmark achieved 96.7% action accuracy, 93.5% product/qty accuracy, 100% (5/5) conversation scenario completion, and 0 oversell violations.
 - **Phase 4 (Audio Pipeline & Voice Turn Integration):** Complete & verified. Resilient audio ingestion, format validation, WebM/Opus transcoding, live Prisma v3 STT integration, Devanagari transliteration bridging, zero-hallucination assistant response generator, live Timbre v2.5 TTS synthesis, in-memory audio caching, and request idempotency. 85/85 automated tests passing. 10-turn live voice benchmark achieved 10/10 successes with playable audio (median total turn latency 2.76s) and strict two-phase commit preservation (0 stock deducted).
 - **Phase 5 (Customer Mobile Web Interface):** Complete & verified. Built polished, mobile-first Next.js 14 application with warm-neutral vernacular commerce design tokens, `useVoiceRecorder` (live waveform analyzer, 60s cap, cross-browser MIME detection), `useAudioPlayer` (autoplay block detection and fallback controls), authoritative backend cart synchronization, itemized review modal, and two-phase pending order placement. 110 automated tests passing (90 Python pytest + 20 Next.js Vitest).
+- **Phase 6 (Shopkeeper Merchant Dashboard & Operations Interface):** Complete & verified. Built protected merchant authentication (`/merchant/login`), live SQL-aggregated overview metrics (`/merchant`), full order state machine (`pending -> accepted -> preparing -> ready -> completed` and `cancelled` with compensating stock restoration), atomic inventory deduction on acceptance, rejection with zero stock modification, live stock editor with threshold alerts, product catalogue CRUD, and immutable stock movement audit feed. 130 automated tests passing (101 Python pytest + 29 Next.js Vitest). Production build verified cleanly with 0 errors. 4 full-resolution screenshots captured.
 
-### Immediate Next Steps (Phase 6: Shopkeeper Merchant Dashboard & Operations Interface)
-1. **Merchant Operations Portal:** Dedicated dashboard for shopkeepers to review incoming pending voice orders in real time.
-2. **Order Lifecycle Transitions:** Action buttons for merchant `Accept` (triggers atomic inventory check and stock deduction) and `Reject` (with documented cancellation reasons).
-3. **Live Inventory Editor:** Simple interface for shopkeepers to adjust stock quantities, toggle product active status, and modify retail prices.
-4. **Order Status Polling & Notifications:** Low-latency feed updates for incoming customer orders.
+### Immediate Next Steps (Phase 7: Comprehensive System Testing, Performance Optimization & Benchmark Verification)
+1. **Full-Spectrum End-to-End Test Suite:** Integrate customer voice ordering directly with merchant dashboard acceptance in end-to-end integration tests.
+2. **Performance & Latency Optimization:** Profile voice turn latency bottlenecks (transcoding, Prisma STT, SQLite/PostgreSQL query latency, Timbre TTS).
+3. **Formal Evaluation Benchmark Run:** Re-run all 30 starter pack voice test cases and 5 multi-turn scenarios, documenting exact WER, intent accuracy, and latency metrics in `docs/benchmark_report.md`.
+4. **Stress & Error Resilience Testing:** Simulate network drops, corrupted audio uploads, concurrent conflicting orders, and empty audio inputs.

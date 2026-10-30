@@ -1,5 +1,9 @@
 from backend.app.schemas.common import PaginatedResponse, MessageResponse
-from backend.app.schemas.inventory import InventoryResponse, InventoryUpdateRequest
+from backend.app.schemas.inventory import (
+    InventoryResponse,
+    InventoryUpdateRequest,
+    StockMovementResponse,
+)
 from backend.app.schemas.product import (
     ProductBase,
     ProductCreate,
@@ -19,9 +23,16 @@ from backend.app.schemas.order import (
     OrderItemResponse,
     OrderCreateRequest,
     OrderRejectRequest,
+    OrderStatusUpdateRequest,
     OrderResponse,
 )
 from backend.app.schemas.store import StoreResponse
+from backend.app.schemas.auth import (
+    MerchantLoginRequest,
+    MerchantLoginResponse,
+    MerchantMeResponse,
+)
+from backend.app.schemas.merchant import MerchantOverviewResponse
 from backend.app.schemas.intelligence import (
     IntentType,
     DialogueState,
@@ -63,7 +74,13 @@ __all__ = [
     "OrderItemResponse",
     "OrderCreateRequest",
     "OrderRejectRequest",
+    "OrderStatusUpdateRequest",
     "OrderResponse",
+    "StockMovementResponse",
+    "MerchantLoginRequest",
+    "MerchantLoginResponse",
+    "MerchantMeResponse",
+    "MerchantOverviewResponse",
     "IntentType",
     "DialogueState",
     "ClarificationType",

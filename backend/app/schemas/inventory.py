@@ -19,3 +19,14 @@ class InventoryUpdateRequest(BaseModel):
     stock_quantity: Decimal = Field(..., ge=0, description="New available stock quantity")
     low_stock_threshold: Optional[Decimal] = Field(None, ge=0)
     reason: str = Field(default="manual_adjustment", description="Audit reason for stock change")
+
+class StockMovementResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    movement_id: str
+    product_id: str
+    product_name: Optional[str] = None
+    order_id: Optional[str] = None
+    change_quantity: Decimal
+    reason: str
+    created_at: datetime

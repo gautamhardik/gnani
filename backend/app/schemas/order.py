@@ -68,7 +68,11 @@ class OrderCreateRequest(BaseModel):
     items: List[OrderItemCreate] = Field(..., min_length=1)
 
 class OrderRejectRequest(BaseModel):
-    reason: str = Field(..., min_length=1, description="Reason for merchant rejection")
+    reason: Optional[str] = Field(default="Order rejected by merchant", description="Reason for merchant rejection")
+
+class OrderStatusUpdateRequest(BaseModel):
+    status: str = Field(..., description="Target status: preparing, ready, completed, cancelled")
+    notes: Optional[str] = Field(default=None, description="Optional notes on status transition")
 
 class OrderResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

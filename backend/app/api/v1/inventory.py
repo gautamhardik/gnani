@@ -9,6 +9,7 @@ from backend.app.models import StoreInventory, Product, StockMovement
 from backend.app.schemas import (
     InventoryResponse,
     InventoryUpdateRequest,
+    StockMovementResponse,
     PaginatedResponse,
 )
 
@@ -54,6 +55,50 @@ def list_inventory(
         page=page,
         size=size,
         has_more=(offset + len(inv_list)) < total
+    )
+
+
+@router.get("/movements", response_model=PaginatedResponse[StockMovementResponse])
+def list_stock_movements(
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    product_id: Optional[str] = None,
+    order_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _: bool = Depends(get_current_merchant)
+):
+    """
+    Lists recorded stock movements and audit reasons (Merchant Protected).
+    """
+    query = db.query(StockMovement).options(joinedload(StockMovement.product))
+    if product_id:
+        query = query.filter(StockMovement.product_id == product_id)
+    if order_id:
+        query = query.filter(StockMovement.order_id == order_id)
+
+    total = query.count()
+    offset = (page - 1) * size
+    movements = query.order_by(StockMovement.created_at.desc()).offset(offset).limit(size).all()
+
+    items = [
+        StockMovementResponse(
+            movement_id=m.movement_id,
+            product_id=m.product_id,
+            product_name=m.product.name if m.product else None,
+            order_id=m.order_id,
+            change_quantity=m.change_quantity,
+            reason=m.reason,
+            created_at=m.created_at
+        )
+        for m in movements
+    ]
+
+    return PaginatedResponse(
+        items=items,
+        total=total,
+        page=page,
+        size=size,
+        has_more=(offset + len(items)) < total
     )
 
 

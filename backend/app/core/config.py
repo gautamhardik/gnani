@@ -32,6 +32,8 @@ class Settings(BaseSettings):
 
     # Merchant Authentication
     SHOPKEEPER_AUTH_TOKEN: str = "demo-shopkeeper-secret-key-sharma-store"
+    MERCHANT_USERNAME: str = Field(default="sharma", description="Default merchant login username")
+    MERCHANT_PASSWORD: str = Field(default="kirana@2026", description="Default merchant login password")
 
     # CORS
     ALLOWED_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000", "*"]
