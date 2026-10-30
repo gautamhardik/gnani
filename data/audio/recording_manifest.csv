@@ -1,0 +1,31 @@
+﻿case_id,audio_filename,status,speaker_consent_required,expected_transcript
+TC001,TC001.wav,TO_RECORD,True,Mujhe ek kilo aata chahiye.
+TC002,TC002.wav,TO_RECORD,True,Bhaiya ek kilo chini aur do packet Maggi dena.
+TC003,TC003.wav,TO_RECORD,True,One packet Parle-G aur half litre Amul milk add kar do.
+TC004,TC004.wav,TO_RECORD,True,Aadha kilo gehun ka aata de do.
+TC005,TC005.wav,TO_RECORD,True,Do packet maggi noodles chahiye.
+TC006,TC006.wav,TO_RECORD,True,250 gram chini dena.
+TC007,TC007.wav,TO_RECORD,True,Paanch sau gram loose chawal.
+TC008,TC008.wav,TO_RECORD,True,Aadha litre Amul Taaza doodh.
+TC009,TC009.wav,TO_RECORD,True,Ek litre Amul Taaza milk dena.
+TC010,TC010.wav,TO_RECORD,True,Amul Gold aadha litre dena.
+TC011,TC011.wav,TO_RECORD,True,"Ek kilo toor dal, aadha kilo masoor dal aur ek Tata namak."
+TC012,TC012.wav,TO_RECORD,True,Please add two Good Day biscuit packets and one Coke bottle.
+TC013,TC013.wav,TO_RECORD,True,Quarter kilo besan chahiye.
+TC014,TC014.wav,TO_RECORD,True,Ek Nescafe coffee jar de do.
+TC015,TC015.wav,TO_RECORD,True,Mujhe chhe Nescafe coffee jar chahiye.
+TC016,TC016.wav,TO_RECORD,True,Das Amul ghee ke jar de do.
+TC017,TC017.wav,TO_RECORD,True,"Ek kilo chini... nahi, aadha kilo kar do."
+TC018,TC018.wav,TO_RECORD,True,Maggi hata do.
+TC019,TC019.wav,TO_RECORD,True,Ek doodh de dena.
+TC020,TC020.wav,TO_RECORD,True,Ek Amul milk dena.
+TC021,TC021.wav,TO_RECORD,True,Thoda sa aata de dena.
+TC022,TC022.wav,TO_RECORD,True,"Do packet Maggi nahi, ek hi packet."
+TC023,TC023.wav,TO_RECORD,True,Do litre Amul Taaza milk aur aadha kilo chini.
+TC024,TC024.wav,TO_RECORD,True,Teen Parle-G aur do Lays chips.
+TC025,TC025.wav,TO_RECORD,True,Dabur amla ka sau ml wala tel.
+TC026,TC026.wav,TO_RECORD,True,Ek kilo dragon fruit de do.
+TC027,TC027.wav,TO_RECORD,True,Ek Maggi ka aadha kilo de do.
+TC028,TC028.wav,TO_RECORD,True,Amul Taaza aadha litre kitne ka hai?
+TC029,TC029.wav,TO_RECORD,True,Aapke paas kitna Parle-G hai?
+TC030,TC030.wav,TO_RECORD,True,"Haan, order confirm kar do."

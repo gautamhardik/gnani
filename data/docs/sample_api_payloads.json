@@ -1,0 +1,26 @@
+{
+  "stt_request_note": "Use current Gnani Prisma documentation for the exact request fields and endpoint. API keys must remain on the backend.",
+  "normalized_order_example": {
+    "session_id": "SESSION_DEMO_001",
+    "transcript": "Bhaiya ek kilo chini aur do packet Maggi dena.",
+    "intent": "add_items",
+    "items": [
+      {
+        "product_id": "PRD034",
+        "quantity": 1,
+        "unit": "kg"
+      },
+      {
+        "product_id": "PRD041",
+        "quantity": 2,
+        "unit": "packet"
+      }
+    ]
+  },
+  "tts_text_example": {
+    "text": "Ji, ek kilo chini aur do packet Maggi add kar diye hain. Kya aap kuch aur lena chahenge?",
+    "language": "hi-en",
+    "voice": "verify_available_voice_in_console"
+  },
+  "warning": "These are normalized application examples, not guaranteed wire-format payloads for Gnani APIs. Confirm exact fields and endpoints in current official docs."
+}

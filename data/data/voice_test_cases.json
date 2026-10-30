@@ -1,0 +1,573 @@
+[
+  {
+    "case_id": "TC001",
+    "category": "single_item",
+    "utterance": "Mujhe ek kilo aata chahiye.",
+    "language": "hi-Latn",
+    "gold_transcript": "Mujhe ek kilo aata chahiye.",
+    "expected_items": [
+      {
+        "product_id": "PRD001",
+        "quantity": 1,
+        "unit": "kg",
+        "requested_quantity": 1,
+        "requested_unit": "kg"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Basic Hindi/Hinglish single item.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC002",
+    "category": "multi_item",
+    "utterance": "Bhaiya ek kilo chini aur do packet Maggi dena.",
+    "language": "hi-Latn",
+    "gold_transcript": "Bhaiya ek kilo chini aur do packet Maggi dena.",
+    "expected_items": [
+      {
+        "product_id": "PRD034",
+        "quantity": 1,
+        "unit": "kg",
+        "requested_quantity": 1,
+        "requested_unit": "kg"
+      },
+      {
+        "product_id": "PRD041",
+        "quantity": 2,
+        "unit": "packet",
+        "requested_quantity": 2,
+        "requested_unit": "packet"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Two products in one utterance.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC003",
+    "category": "code_mix",
+    "utterance": "One packet Parle-G aur half litre Amul milk add kar do.",
+    "language": "hi-en",
+    "gold_transcript": "One packet Parle-G aur half litre Amul milk add kar do.",
+    "expected_items": [
+      {
+        "product_id": "PRD042",
+        "quantity": 1,
+        "unit": "packet",
+        "requested_quantity": 1,
+        "requested_unit": "packet"
+      },
+      {
+        "product_id": "PRD021",
+        "quantity": 1,
+        "unit": "pouch",
+        "requested_quantity": 0.5,
+        "requested_unit": "L"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "English quantity words with Hindi framing.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC004",
+    "category": "alias",
+    "utterance": "Aadha kilo gehun ka aata de do.",
+    "language": "hi-Latn",
+    "gold_transcript": "Aadha kilo gehun ka aata de do.",
+    "expected_items": [
+      {
+        "product_id": "PRD001",
+        "quantity": 0.5,
+        "unit": "kg",
+        "requested_quantity": 0.5,
+        "requested_unit": "kg"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Colloquial alias and fractional kg.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC005",
+    "category": "alias",
+    "utterance": "Do packet maggi noodles chahiye.",
+    "language": "hi-Latn",
+    "gold_transcript": "Do packet maggi noodles chahiye.",
+    "expected_items": [
+      {
+        "product_id": "PRD041",
+        "quantity": 2,
+        "unit": "packet",
+        "requested_quantity": 2,
+        "requested_unit": "packet"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Brand/product alias.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC006",
+    "category": "unit_conversion",
+    "utterance": "250 gram chini dena.",
+    "language": "hi-Latn",
+    "gold_transcript": "250 gram chini dena.",
+    "expected_items": [
+      {
+        "product_id": "PRD034",
+        "quantity": 0.25,
+        "unit": "kg",
+        "requested_quantity": 250,
+        "requested_unit": "g"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Convert grams to kg for bulk item.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC007",
+    "category": "unit_conversion",
+    "utterance": "Paanch sau gram loose chawal.",
+    "language": "hi-Latn",
+    "gold_transcript": "Paanch sau gram loose chawal.",
+    "expected_items": [
+      {
+        "product_id": "PRD011",
+        "quantity": 0.5,
+        "unit": "kg",
+        "requested_quantity": 500,
+        "requested_unit": "g"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Convert grams to kg.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC008",
+    "category": "pack_size_match",
+    "utterance": "Aadha litre Amul Taaza doodh.",
+    "language": "hi-Latn",
+    "gold_transcript": "Aadha litre Amul Taaza doodh.",
+    "expected_items": [
+      {
+        "product_id": "PRD021",
+        "quantity": 1,
+        "unit": "pouch",
+        "requested_quantity": 0.5,
+        "requested_unit": "L"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Map requested 500 ml to one 500 ml pouch.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC009",
+    "category": "pack_size_match",
+    "utterance": "Ek litre Amul Taaza milk dena.",
+    "language": "hi-en",
+    "gold_transcript": "Ek litre Amul Taaza milk dena.",
+    "expected_items": [
+      {
+        "product_id": "PRD021",
+        "quantity": 2,
+        "unit": "pouch",
+        "requested_quantity": 1,
+        "requested_unit": "L"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Map 1 L to two 500 ml pouches, if no 1 L SKU selected.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC010",
+    "category": "brand_variant",
+    "utterance": "Amul Gold aadha litre dena.",
+    "language": "hi-Latn",
+    "gold_transcript": "Amul Gold aadha litre dena.",
+    "expected_items": [
+      {
+        "product_id": "PRD022",
+        "quantity": 1,
+        "unit": "pouch",
+        "requested_quantity": 0.5,
+        "requested_unit": "L"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Identify specific brand variant.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC011",
+    "category": "multi_item",
+    "utterance": "Ek kilo toor dal, aadha kilo masoor dal aur ek Tata namak.",
+    "language": "hi-Latn",
+    "gold_transcript": "Ek kilo toor dal, aadha kilo masoor dal aur ek Tata namak.",
+    "expected_items": [
+      {
+        "product_id": "PRD014",
+        "quantity": 1,
+        "unit": "packet",
+        "requested_quantity": 1,
+        "requested_unit": "packet"
+      },
+      {
+        "product_id": "PRD016",
+        "quantity": 0.5,
+        "unit": "packet",
+        "requested_quantity": 0.5,
+        "requested_unit": "packet"
+      },
+      {
+        "product_id": "PRD035",
+        "quantity": 1,
+        "unit": "packet",
+        "requested_quantity": 1,
+        "requested_unit": "packet"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Three item order.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC012",
+    "category": "code_mix",
+    "utterance": "Please add two Good Day biscuit packets and one Coke bottle.",
+    "language": "en",
+    "gold_transcript": "Please add two Good Day biscuit packets and one Coke bottle.",
+    "expected_items": [
+      {
+        "product_id": "PRD043",
+        "quantity": 2,
+        "unit": "packet",
+        "requested_quantity": 2,
+        "requested_unit": "packet"
+      },
+      {
+        "product_id": "PRD055",
+        "quantity": 1,
+        "unit": "bottle",
+        "requested_quantity": 1,
+        "requested_unit": "bottle"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "English utterance; multiple products.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC013",
+    "category": "quantity_decimal",
+    "utterance": "Quarter kilo besan chahiye.",
+    "language": "en",
+    "gold_transcript": "Quarter kilo besan chahiye.",
+    "expected_items": [
+      {
+        "product_id": "PRD003",
+        "quantity": null,
+        "unit": "packet",
+        "requested_quantity": 0.25,
+        "requested_unit": "kg"
+      }
+    ],
+    "expected_action": "clarify_or_reject",
+    "notes": "Catalogue is 1 kg fixed pack; do not silently sell 250 g unless split-pack supported.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC014",
+    "category": "out_of_stock",
+    "utterance": "Ek Nescafe coffee jar de do.",
+    "language": "hi-en",
+    "gold_transcript": "Ek Nescafe coffee jar de do.",
+    "expected_items": [
+      {
+        "product_id": "PRD052",
+        "quantity": 1,
+        "unit": "jar",
+        "requested_quantity": 1,
+        "requested_unit": "jar"
+      }
+    ],
+    "expected_action": "check_stock",
+    "notes": "Stock is low but available; verify stock before adding.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC015",
+    "category": "out_of_stock",
+    "utterance": "Mujhe chhe Nescafe coffee jar chahiye.",
+    "language": "hi-Latn",
+    "gold_transcript": "Mujhe chhe Nescafe coffee jar chahiye.",
+    "expected_items": [
+      {
+        "product_id": "PRD052",
+        "quantity": 6,
+        "unit": "jar",
+        "requested_quantity": 6,
+        "requested_unit": "jar"
+      }
+    ],
+    "expected_action": "reject_insufficient_stock",
+    "notes": "Only 6 in stock? This is deliberately at the edge; allow exactly 6.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC016",
+    "category": "unavailable",
+    "utterance": "Das Amul ghee ke jar de do.",
+    "language": "hi-Latn",
+    "gold_transcript": "Das Amul ghee ke jar de do.",
+    "expected_items": [
+      {
+        "product_id": "PRD027",
+        "quantity": 10,
+        "unit": "jar",
+        "requested_quantity": 10,
+        "requested_unit": "jar"
+      }
+    ],
+    "expected_action": "reject_insufficient_stock",
+    "notes": "Only 7 jars in stock.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC017",
+    "category": "correction_single",
+    "utterance": "Ek kilo chini... nahi, aadha kilo kar do.",
+    "language": "hi-Latn",
+    "gold_transcript": "Ek kilo chini... nahi, aadha kilo kar do.",
+    "expected_items": [
+      {
+        "product_id": "PRD034",
+        "quantity": 0.5,
+        "unit": "kg",
+        "requested_quantity": 0.5,
+        "requested_unit": "kg"
+      }
+    ],
+    "expected_action": "replace_quantity",
+    "notes": "Correction within one utterance.",
+    "requires_existing_cart": true
+  },
+  {
+    "case_id": "TC018",
+    "category": "remove_item",
+    "utterance": "Maggi hata do.",
+    "language": "hi-Latn",
+    "gold_transcript": "Maggi hata do.",
+    "expected_items": [
+      {
+        "product_id": "PRD041",
+        "quantity": 0,
+        "unit": "packet",
+        "requested_quantity": 0,
+        "requested_unit": "packet"
+      }
+    ],
+    "expected_action": "remove_item",
+    "notes": "Requires existing cart context.",
+    "requires_existing_cart": true
+  },
+  {
+    "case_id": "TC019",
+    "category": "ambiguous_product",
+    "utterance": "Ek doodh de dena.",
+    "language": "hi-Latn",
+    "gold_transcript": "Ek doodh de dena.",
+    "expected_items": [],
+    "expected_action": "clarify_product",
+    "notes": "Generic milk matches three variants.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC020",
+    "category": "ambiguous_size",
+    "utterance": "Ek Amul milk dena.",
+    "language": "hi-Latn",
+    "gold_transcript": "Ek Amul milk dena.",
+    "expected_items": [],
+    "expected_action": "clarify_size",
+    "notes": "Ask which size/variant; do not guess.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC021",
+    "category": "unclear_quantity",
+    "utterance": "Thoda sa aata de dena.",
+    "language": "hi-Latn",
+    "gold_transcript": "Thoda sa aata de dena.",
+    "expected_items": [],
+    "expected_action": "clarify_quantity",
+    "notes": "Ask for a measurable quantity.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC022",
+    "category": "negation_correction",
+    "utterance": "Do packet Maggi nahi, ek hi packet.",
+    "language": "hi-Latn",
+    "gold_transcript": "Do packet Maggi nahi, ek hi packet.",
+    "expected_items": [
+      {
+        "product_id": "PRD041",
+        "quantity": 1,
+        "unit": "packet",
+        "requested_quantity": 1,
+        "requested_unit": "packet"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Negation/correction in a single utterance.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC023",
+    "category": "mixed_units",
+    "utterance": "Do litre Amul Taaza milk aur aadha kilo chini.",
+    "language": "hi-Latn",
+    "gold_transcript": "Do litre Amul Taaza milk aur aadha kilo chini.",
+    "expected_items": [
+      {
+        "product_id": "PRD021",
+        "quantity": 4,
+        "unit": "pouch",
+        "requested_quantity": 2,
+        "requested_unit": "L"
+      },
+      {
+        "product_id": "PRD034",
+        "quantity": 0.5,
+        "unit": "kg",
+        "requested_quantity": 0.5,
+        "requested_unit": "kg"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Convert units and resolve milk size.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC024",
+    "category": "multiple_quantities",
+    "utterance": "Teen Parle-G aur do Lays chips.",
+    "language": "hi-Latn",
+    "gold_transcript": "Teen Parle-G aur do Lays chips.",
+    "expected_items": [
+      {
+        "product_id": "PRD042",
+        "quantity": 3,
+        "unit": "packet",
+        "requested_quantity": 3,
+        "requested_unit": "packet"
+      },
+      {
+        "product_id": "PRD045",
+        "quantity": 2,
+        "unit": "packet",
+        "requested_quantity": 2,
+        "requested_unit": "packet"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Two packaged products.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC025",
+    "category": "brand_alias",
+    "utterance": "Dabur amla ka sau ml wala tel.",
+    "language": "hi-Latn",
+    "gold_transcript": "Dabur amla ka sau ml wala tel.",
+    "expected_items": [
+      {
+        "product_id": "PRD064",
+        "quantity": 1,
+        "unit": "bottle",
+        "requested_quantity": 100,
+        "requested_unit": "ml"
+      }
+    ],
+    "expected_action": "add_items",
+    "notes": "Identify hair oil size.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC026",
+    "category": "product_not_found",
+    "utterance": "Ek kilo dragon fruit de do.",
+    "language": "hi-Latn",
+    "gold_transcript": "Ek kilo dragon fruit de do.",
+    "expected_items": [],
+    "expected_action": "product_not_found",
+    "notes": "Product absent from demo catalogue.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC027",
+    "category": "unsupported_unit",
+    "utterance": "Ek Maggi ka aadha kilo de do.",
+    "language": "hi-Latn",
+    "gold_transcript": "Ek Maggi ka aadha kilo de do.",
+    "expected_items": [],
+    "expected_action": "clarify_unit",
+    "notes": "Do not interpret packet food as loose weight.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC028",
+    "category": "price_question",
+    "utterance": "Amul Taaza aadha litre kitne ka hai?",
+    "language": "hi-Latn",
+    "gold_transcript": "Amul Taaza aadha litre kitne ka hai?",
+    "expected_items": [
+      {
+        "product_id": "PRD021",
+        "quantity": 1,
+        "unit": "pouch",
+        "requested_quantity": 0.5,
+        "requested_unit": "L"
+      }
+    ],
+    "expected_action": "quote_price",
+    "notes": "Price query; should not add to cart without request.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC029",
+    "category": "stock_question",
+    "utterance": "Aapke paas kitna Parle-G hai?",
+    "language": "hi-Latn",
+    "gold_transcript": "Aapke paas kitna Parle-G hai?",
+    "expected_items": [
+      {
+        "product_id": "PRD042",
+        "quantity": null,
+        "unit": "packet",
+        "requested_quantity": null,
+        "requested_unit": "packet"
+      }
+    ],
+    "expected_action": "quote_stock",
+    "notes": "Inventory query; should not create order.",
+    "requires_existing_cart": false
+  },
+  {
+    "case_id": "TC030",
+    "category": "confirmation",
+    "utterance": "Haan, order confirm kar do.",
+    "language": "hi-Latn",
+    "gold_transcript": "Haan, order confirm kar do.",
+    "expected_items": [],
+    "expected_action": "confirm_existing_cart",
+    "notes": "Requires cart summary and explicit confirmation state.",
+    "requires_existing_cart": true
+  }
+]

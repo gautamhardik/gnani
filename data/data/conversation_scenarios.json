@@ -1,0 +1,154 @@
+[
+  {
+    "scenario_id": "CONV001",
+    "name": "Quantity correction",
+    "turns": [
+      {
+        "speaker": "customer",
+        "utterance": "Ek kilo chini add karo.",
+        "expected_action": "add_items"
+      },
+      {
+        "speaker": "customer",
+        "utterance": "Nahi, aadha kilo kar do.",
+        "expected_action": "replace_quantity"
+      }
+    ],
+    "expected_final_cart": [
+      {
+        "product_id": "PRD034",
+        "quantity": 0.5,
+        "unit": "kg",
+        "requested_quantity": 0.5,
+        "requested_unit": "kg"
+      }
+    ],
+    "success_condition": "Only 0.5 kg sugar remains in cart."
+  },
+  {
+    "scenario_id": "CONV002",
+    "name": "Add then remove",
+    "turns": [
+      {
+        "speaker": "customer",
+        "utterance": "Do packet Maggi aur ek Parle-G add karo.",
+        "expected_action": "add_items"
+      },
+      {
+        "speaker": "customer",
+        "utterance": "Maggi hata do.",
+        "expected_action": "remove_item"
+      }
+    ],
+    "expected_final_cart": [
+      {
+        "product_id": "PRD042",
+        "quantity": 1,
+        "unit": "packet",
+        "requested_quantity": 1,
+        "requested_unit": "packet"
+      }
+    ],
+    "success_condition": "Maggi removed; Parle-G remains."
+  },
+  {
+    "scenario_id": "CONV003",
+    "name": "Ambiguous milk clarification",
+    "turns": [
+      {
+        "speaker": "customer",
+        "utterance": "Ek doodh dena.",
+        "expected_action": "clarify_product"
+      },
+      {
+        "speaker": "assistant",
+        "utterance": "Kaunsa milk chahiye: Amul Taaza, Amul Gold ya Mother Dairy?",
+        "expected_action": "clarification"
+      },
+      {
+        "speaker": "customer",
+        "utterance": "Amul Taaza aadha litre.",
+        "expected_action": "add_items"
+      }
+    ],
+    "expected_final_cart": [
+      {
+        "product_id": "PRD021",
+        "quantity": 1,
+        "unit": "pouch",
+        "requested_quantity": 0.5,
+        "requested_unit": "L"
+      }
+    ],
+    "success_condition": "Assistant asks before selecting a milk variant."
+  },
+  {
+    "scenario_id": "CONV004",
+    "name": "Insufficient inventory",
+    "turns": [
+      {
+        "speaker": "customer",
+        "utterance": "Das Amul ghee ke jar add karo.",
+        "expected_action": "check_stock"
+      },
+      {
+        "speaker": "assistant",
+        "utterance": "Abhi sirf saat jar available hain. Kya saat chahiye?",
+        "expected_action": "clarification"
+      },
+      {
+        "speaker": "customer",
+        "utterance": "Theek hai, do jar kar do.",
+        "expected_action": "add_items"
+      }
+    ],
+    "expected_final_cart": [
+      {
+        "product_id": "PRD027",
+        "quantity": 2,
+        "unit": "jar",
+        "requested_quantity": 2,
+        "requested_unit": "jar"
+      }
+    ],
+    "success_condition": "The cart never exceeds stock and asks customer to revise."
+  },
+  {
+    "scenario_id": "CONV005",
+    "name": "Review and explicit confirmation",
+    "turns": [
+      {
+        "speaker": "customer",
+        "utterance": "Ek kilo aata aur do Maggi add karo.",
+        "expected_action": "add_items"
+      },
+      {
+        "speaker": "assistant",
+        "utterance": "Aapka total ... rupaye hai. Confirm karna hai?",
+        "expected_action": "read_back_and_ask"
+      },
+      {
+        "speaker": "customer",
+        "utterance": "Haan, confirm kar do.",
+        "expected_action": "confirm_order"
+      }
+    ],
+    "expected_final_cart": [
+      {
+        "product_id": "PRD001",
+        "quantity": 1,
+        "unit": "kg",
+        "requested_quantity": 1,
+        "requested_unit": "kg"
+      },
+      {
+        "product_id": "PRD041",
+        "quantity": 2,
+        "unit": "packet",
+        "requested_quantity": 2,
+        "requested_unit": "packet"
+      }
+    ],
+    "success_condition": "Order saved only after explicit affirmative confirmation."
+  }
+]

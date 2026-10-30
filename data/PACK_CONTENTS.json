@@ -1,0 +1,13 @@
+{
+  "pack_name": "DukaanSaathi Starter Pack",
+  "created_date": "2026-10-30",
+  "products": 100,
+  "aliases": 306,
+  "inventory_records": 100,
+  "categories": 10,
+  "voice_test_cases": 30,
+  "conversation_scenarios": 5,
+  "audio_recordings_included": 0,
+  "database": "database/dukkaansaathi_seed.sqlite",
+  "price_data": "Synthetic demo values; not live prices."
+}

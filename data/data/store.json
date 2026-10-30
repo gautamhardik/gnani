@@ -1,0 +1,15 @@
+{
+  "store_id": "STORE001",
+  "store_name": "Sharma General Store (Demo)",
+  "slug": "sharma-general-store-demo",
+  "description": "Fictional single-store demo tenant for DukaanSaathi.",
+  "currency": "INR",
+  "timezone": "Asia/Kolkata",
+  "language_preferences": [
+    "hi-IN",
+    "hi-en",
+    "en-IN"
+  ],
+  "contact_display": "Demo store — no real phone number",
+  "is_demo_data": true
+}

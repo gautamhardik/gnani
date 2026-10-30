@@ -1,0 +1,101 @@
+﻿product_id,sku,name,brand,category,sale_unit,pack_size,pack_size_unit,price_inr,is_active,description,currency,price_is_demo
+PRD001,DS-0001,Loose Wheat Flour (Atta),Loose,Staples & Flour,kg,1,kg,42,True,Demo catalogue item: Loose Wheat Flour (Atta).,INR,True
+PRD002,DS-0002,Aashirvaad Whole Wheat Atta 5 kg,Aashirvaad,Staples & Flour,bag,5,kg,245,True,Demo catalogue item: Aashirvaad Whole Wheat Atta 5 kg.,INR,True
+PRD003,DS-0003,Besan 1 kg,Local,Staples & Flour,packet,1,kg,92,True,Demo catalogue item: Besan 1 kg.,INR,True
+PRD004,DS-0004,Maida 1 kg,Local,Staples & Flour,packet,1,kg,48,True,Demo catalogue item: Maida 1 kg.,INR,True
+PRD005,DS-0005,Sooji 500 g,Local,Staples & Flour,packet,500,g,32,True,Demo catalogue item: Sooji 500 g.,INR,True
+PRD006,DS-0006,Poha 500 g,Local,Staples & Flour,packet,500,g,38,True,Demo catalogue item: Poha 500 g.,INR,True
+PRD007,DS-0007,Dalia 500 g,Local,Staples & Flour,packet,500,g,35,True,Demo catalogue item: Dalia 500 g.,INR,True
+PRD008,DS-0008,Multigrain Atta 1 kg,Local,Staples & Flour,packet,1,kg,78,True,Demo catalogue item: Multigrain Atta 1 kg.,INR,True
+PRD009,DS-0009,Maize Flour 1 kg,Local,Staples & Flour,packet,1,kg,55,True,Demo catalogue item: Maize Flour 1 kg.,INR,True
+PRD010,DS-0010,Sattu 500 g,Local,Staples & Flour,packet,500,g,52,True,Demo catalogue item: Sattu 500 g.,INR,True
+PRD011,DS-0011,Regular Rice (Loose),Loose,Rice & Pulses,kg,1,kg,55,True,Demo catalogue item: Regular Rice (Loose).,INR,True
+PRD012,DS-0012,India Gate Basmati Rice 1 kg,India Gate,Rice & Pulses,packet,1,kg,135,True,Demo catalogue item: India Gate Basmati Rice 1 kg.,INR,True
+PRD013,DS-0013,Sona Masoori Rice 1 kg,Local,Rice & Pulses,packet,1,kg,72,True,Demo catalogue item: Sona Masoori Rice 1 kg.,INR,True
+PRD014,DS-0014,Toor Dal 1 kg,Local,Rice & Pulses,packet,1,kg,158,True,Demo catalogue item: Toor Dal 1 kg.,INR,True
+PRD015,DS-0015,Moong Dal 1 kg,Local,Rice & Pulses,packet,1,kg,122,True,Demo catalogue item: Moong Dal 1 kg.,INR,True
+PRD016,DS-0016,Masoor Dal 1 kg,Local,Rice & Pulses,packet,1,kg,98,True,Demo catalogue item: Masoor Dal 1 kg.,INR,True
+PRD017,DS-0017,Chana Dal 1 kg,Local,Rice & Pulses,packet,1,kg,88,True,Demo catalogue item: Chana Dal 1 kg.,INR,True
+PRD018,DS-0018,Urad Dal 1 kg,Local,Rice & Pulses,packet,1,kg,145,True,Demo catalogue item: Urad Dal 1 kg.,INR,True
+PRD019,DS-0019,Rajma 500 g,Local,Rice & Pulses,packet,500,g,85,True,Demo catalogue item: Rajma 500 g.,INR,True
+PRD020,DS-0020,Kabuli Chana 500 g,Local,Rice & Pulses,packet,500,g,76,True,Demo catalogue item: Kabuli Chana 500 g.,INR,True
+PRD021,DS-0021,Amul Taaza Milk 500 ml Pouch,Amul,Dairy,pouch,500,ml,29,True,Demo catalogue item: Amul Taaza Milk 500 ml Pouch.,INR,True
+PRD022,DS-0022,Amul Gold Milk 500 ml Pouch,Amul,Dairy,pouch,500,ml,34,True,Demo catalogue item: Amul Gold Milk 500 ml Pouch.,INR,True
+PRD023,DS-0023,Mother Dairy Toned Milk 500 ml,Mother Dairy,Dairy,pouch,500,ml,28,True,Demo catalogue item: Mother Dairy Toned Milk 500 ml.,INR,True
+PRD024,DS-0024,Amul Masti Dahi 400 g,Amul,Dairy,cup,400,g,35,True,Demo catalogue item: Amul Masti Dahi 400 g.,INR,True
+PRD025,DS-0025,Amul Fresh Paneer 200 g,Amul,Dairy,packet,200,g,90,True,Demo catalogue item: Amul Fresh Paneer 200 g.,INR,True
+PRD026,DS-0026,Amul Butter 100 g,Amul,Dairy,pack,100,g,58,True,Demo catalogue item: Amul Butter 100 g.,INR,True
+PRD027,DS-0027,Amul Cow Ghee 500 ml,Amul,Dairy,jar,500,ml,315,True,Demo catalogue item: Amul Cow Ghee 500 ml.,INR,True
+PRD028,DS-0028,Amul Cheese Slices 200 g,Amul,Dairy,pack,200,g,135,True,Demo catalogue item: Amul Cheese Slices 200 g.,INR,True
+PRD029,DS-0029,Mother Dairy Sweet Lassi 200 ml,Mother Dairy,Dairy,bottle,200,ml,25,True,Demo catalogue item: Mother Dairy Sweet Lassi 200 ml.,INR,True
+PRD030,DS-0030,Amul Buttermilk 500 ml,Amul,Dairy,bottle,500,ml,18,True,Demo catalogue item: Amul Buttermilk 500 ml.,INR,True
+PRD031,DS-0031,Mustard Oil 1 L,Local,Oils & Spices,bottle,1,L,155,True,Demo catalogue item: Mustard Oil 1 L.,INR,True
+PRD032,DS-0032,Sunflower Oil 1 L,Fortune,Oils & Spices,bottle,1,L,145,True,Demo catalogue item: Sunflower Oil 1 L.,INR,True
+PRD033,DS-0033,Refined Soybean Oil 1 L,Fortune,Oils & Spices,bottle,1,L,138,True,Demo catalogue item: Refined Soybean Oil 1 L.,INR,True
+PRD034,DS-0034,Loose Sugar,Loose,Oils & Spices,kg,1,kg,46,True,Demo catalogue item: Loose Sugar.,INR,True
+PRD035,DS-0035,Tata Salt 1 kg,Tata,Oils & Spices,packet,1,kg,28,True,Demo catalogue item: Tata Salt 1 kg.,INR,True
+PRD036,DS-0036,Jaggery 500 g,Local,Oils & Spices,packet,500,g,42,True,Demo catalogue item: Jaggery 500 g.,INR,True
+PRD037,DS-0037,Everest Turmeric Powder 100 g,Everest,Oils & Spices,packet,100,g,32,True,Demo catalogue item: Everest Turmeric Powder 100 g.,INR,True
+PRD038,DS-0038,MDH Red Chilli Powder 100 g,MDH,Oils & Spices,packet,100,g,48,True,Demo catalogue item: MDH Red Chilli Powder 100 g.,INR,True
+PRD039,DS-0039,Coriander Powder 100 g,Local,Oils & Spices,packet,100,g,26,True,Demo catalogue item: Coriander Powder 100 g.,INR,True
+PRD040,DS-0040,Cumin Seeds 100 g,Local,Oils & Spices,packet,100,g,38,True,Demo catalogue item: Cumin Seeds 100 g.,INR,True
+PRD041,DS-0041,Maggi Masala Noodles 70 g,Maggi,Snacks & Packaged Foods,packet,70,g,14,True,Demo catalogue item: Maggi Masala Noodles 70 g.,INR,True
+PRD042,DS-0042,Parle-G Biscuits 100 g,Parle,Snacks & Packaged Foods,packet,100,g,10,True,Demo catalogue item: Parle-G Biscuits 100 g.,INR,True
+PRD043,DS-0043,Britannia Good Day 100 g,Britannia,Snacks & Packaged Foods,packet,100,g,25,True,Demo catalogue item: Britannia Good Day 100 g.,INR,True
+PRD044,DS-0044,Cadbury Oreo 120 g,Oreo,Snacks & Packaged Foods,packet,120,g,30,True,Demo catalogue item: Cadbury Oreo 120 g.,INR,True
+PRD045,DS-0045,Lays Classic Chips 50 g,Lays,Snacks & Packaged Foods,packet,50,g,20,True,Demo catalogue item: Lays Classic Chips 50 g.,INR,True
+PRD046,DS-0046,Kurkure Masala Munch India 75 g,Kurkure,Snacks & Packaged Foods,packet,75,g,20,True,Demo catalogue item: Kurkure Masala Munch India 75 g.,INR,True
+PRD047,DS-0047,Haldirams Aloo Bhujia 200 g,Haldirams,Snacks & Packaged Foods,packet,200,g,55,True,Demo catalogue item: Haldirams Aloo Bhujia 200 g.,INR,True
+PRD048,DS-0048,Britannia Rusk 200 g,Britannia,Snacks & Packaged Foods,packet,200,g,35,True,Demo catalogue item: Britannia Rusk 200 g.,INR,True
+PRD049,DS-0049,Harvest White Bread 400 g,Harvest,Snacks & Packaged Foods,packet,400,g,42,True,Demo catalogue item: Harvest White Bread 400 g.,INR,True
+PRD050,DS-0050,Quaker Oats 500 g,Quaker,Snacks & Packaged Foods,packet,500,g,110,True,Demo catalogue item: Quaker Oats 500 g.,INR,True
+PRD051,DS-0051,Tata Tea Premium 250 g,Tata Tea,Beverages,packet,250,g,125,True,Demo catalogue item: Tata Tea Premium 250 g.,INR,True
+PRD052,DS-0052,Nescafe Classic Coffee 100 g,Nescafe,Beverages,jar,100,g,310,True,Demo catalogue item: Nescafe Classic Coffee 100 g.,INR,True
+PRD053,DS-0053,Bournvita 500 g,Cadbury,Beverages,jar,500,g,245,True,Demo catalogue item: Bournvita 500 g.,INR,True
+PRD054,DS-0054,Horlicks 500 g,Horlicks,Beverages,jar,500,g,235,True,Demo catalogue item: Horlicks 500 g.,INR,True
+PRD055,DS-0055,Coca-Cola 750 ml,Coca-Cola,Beverages,bottle,750,ml,40,True,Demo catalogue item: Coca-Cola 750 ml.,INR,True
+PRD056,DS-0056,Sprite 750 ml,Sprite,Beverages,bottle,750,ml,40,True,Demo catalogue item: Sprite 750 ml.,INR,True
+PRD057,DS-0057,Real Mango Juice 1 L,Real,Beverages,carton,1,L,110,True,Demo catalogue item: Real Mango Juice 1 L.,INR,True
+PRD058,DS-0058,Packaged Drinking Water 1 L,Local,Beverages,bottle,1,L,20,True,Demo catalogue item: Packaged Drinking Water 1 L.,INR,True
+PRD059,DS-0059,Tang Orange 500 g,Tang,Beverages,jar,500,g,190,True,Demo catalogue item: Tang Orange 500 g.,INR,True
+PRD060,DS-0060,Rasna Orange 500 g,Rasna,Beverages,packet,500,g,115,True,Demo catalogue item: Rasna Orange 500 g.,INR,True
+PRD061,DS-0061,Lifebuoy Soap 100 g,Lifebuoy,Personal Care,piece,100,g,32,True,Demo catalogue item: Lifebuoy Soap 100 g.,INR,True
+PRD062,DS-0062,Dove Soap 100 g,Dove,Personal Care,piece,100,g,58,True,Demo catalogue item: Dove Soap 100 g.,INR,True
+PRD063,DS-0063,Clinic Plus Shampoo 180 ml,Clinic Plus,Personal Care,bottle,180,ml,92,True,Demo catalogue item: Clinic Plus Shampoo 180 ml.,INR,True
+PRD064,DS-0064,Dabur Amla Hair Oil 100 ml,Dabur,Personal Care,bottle,100,ml,48,True,Demo catalogue item: Dabur Amla Hair Oil 100 ml.,INR,True
+PRD065,DS-0065,Colgate Strong Teeth Toothpaste 150 g,Colgate,Personal Care,tube,150,g,92,True,Demo catalogue item: Colgate Strong Teeth Toothpaste 150 g.,INR,True
+PRD066,DS-0066,Oral-B Toothbrush Medium,Oral-B,Personal Care,piece,1,piece,45,True,Demo catalogue item: Oral-B Toothbrush Medium.,INR,True
+PRD067,DS-0067,Himalaya Neem Face Wash 100 ml,Himalaya,Personal Care,tube,100,ml,145,True,Demo catalogue item: Himalaya Neem Face Wash 100 ml.,INR,True
+PRD068,DS-0068,Dettol Handwash 200 ml,Dettol,Personal Care,bottle,200,ml,78,True,Demo catalogue item: Dettol Handwash 200 ml.,INR,True
+PRD069,DS-0069,Nivea Soft Cream 100 ml,Nivea,Personal Care,jar,100,ml,155,True,Demo catalogue item: Nivea Soft Cream 100 ml.,INR,True
+PRD070,DS-0070,Parachute Coconut Oil 200 ml,Parachute,Personal Care,bottle,200,ml,78,True,Demo catalogue item: Parachute Coconut Oil 200 ml.,INR,True
+PRD071,DS-0071,Surf Excel Easy Wash 1 kg,Surf Excel,Home Cleaning,packet,1,kg,125,True,Demo catalogue item: Surf Excel Easy Wash 1 kg.,INR,True
+PRD072,DS-0072,Rin Detergent Powder 1 kg,Rin,Home Cleaning,packet,1,kg,85,True,Demo catalogue item: Rin Detergent Powder 1 kg.,INR,True
+PRD073,DS-0073,Vim Dishwash Bar 200 g,Vim,Home Cleaning,piece,200,g,22,True,Demo catalogue item: Vim Dishwash Bar 200 g.,INR,True
+PRD074,DS-0074,Vim Dishwash Liquid 500 ml,Vim,Home Cleaning,bottle,500,ml,115,True,Demo catalogue item: Vim Dishwash Liquid 500 ml.,INR,True
+PRD075,DS-0075,Lizol Floor Cleaner 500 ml,Lizol,Home Cleaning,bottle,500,ml,105,True,Demo catalogue item: Lizol Floor Cleaner 500 ml.,INR,True
+PRD076,DS-0076,Harpic Toilet Cleaner 500 ml,Harpic,Home Cleaning,bottle,500,ml,105,True,Demo catalogue item: Harpic Toilet Cleaner 500 ml.,INR,True
+PRD077,DS-0077,Scotch-Brite Scrub Pad,Scotch-Brite,Home Cleaning,piece,1,piece,20,True,Demo catalogue item: Scotch-Brite Scrub Pad.,INR,True
+PRD078,DS-0078,Dettol Disinfectant Liquid 250 ml,Dettol,Home Cleaning,bottle,250,ml,85,True,Demo catalogue item: Dettol Disinfectant Liquid 250 ml.,INR,True
+PRD079,DS-0079,Nirma Detergent Cake 250 g,Nirma,Home Cleaning,piece,250,g,18,True,Demo catalogue item: Nirma Detergent Cake 250 g.,INR,True
+PRD080,DS-0080,Goodknight Mosquito Coil 10 pack,Goodknight,Home Cleaning,box,10,piece,42,True,Demo catalogue item: Goodknight Mosquito Coil 10 pack.,INR,True
+PRD081,DS-0081,Matchbox 10 pack,Local,Household & Kitchen,pack,10,piece,20,True,Demo catalogue item: Matchbox 10 pack.,INR,True
+PRD082,DS-0082,Agarbatti Sandalwood 100 g,Local,Household & Kitchen,packet,100,g,35,True,Demo catalogue item: Agarbatti Sandalwood 100 g.,INR,True
+PRD083,DS-0083,Eveready AA Battery 2 pack,Eveready,Household & Kitchen,pack,2,piece,45,True,Demo catalogue item: Eveready AA Battery 2 pack.,INR,True
+PRD084,DS-0084,Paper Napkins 100 sheets,Local,Household & Kitchen,pack,100,sheet,35,True,Demo catalogue item: Paper Napkins 100 sheets.,INR,True
+PRD085,DS-0085,Aluminium Foil 9 m,Local,Household & Kitchen,roll,9,m,75,True,Demo catalogue item: Aluminium Foil 9 m.,INR,True
+PRD086,DS-0086,Garbage Bags 30 count,Local,Household & Kitchen,pack,30,piece,65,True,Demo catalogue item: Garbage Bags 30 count.,INR,True
+PRD087,DS-0087,Paper Cups 25 count,Local,Household & Kitchen,pack,25,piece,55,True,Demo catalogue item: Paper Cups 25 count.,INR,True
+PRD088,DS-0088,Paper Plates 10 count,Local,Household & Kitchen,pack,10,piece,45,True,Demo catalogue item: Paper Plates 10 count.,INR,True
+PRD089,DS-0089,Cotton Wicks 100 count,Local,Household & Kitchen,pack,100,piece,25,True,Demo catalogue item: Cotton Wicks 100 count.,INR,True
+PRD090,DS-0090,Candles 6 pack,Local,Household & Kitchen,pack,6,piece,30,True,Demo catalogue item: Candles 6 pack.,INR,True
+PRD091,DS-0091,Kissan Tomato Ketchup 200 g,Kissan,Breakfast & Condiments,bottle,200,g,48,True,Demo catalogue item: Kissan Tomato Ketchup 200 g.,INR,True
+PRD092,DS-0092,Kissan Mixed Fruit Jam 200 g,Kissan,Breakfast & Condiments,jar,200,g,75,True,Demo catalogue item: Kissan Mixed Fruit Jam 200 g.,INR,True
+PRD093,DS-0093,Veeba Mayonnaise 250 g,Veeba,Breakfast & Condiments,jar,250,g,95,True,Demo catalogue item: Veeba Mayonnaise 250 g.,INR,True
+PRD094,DS-0094,Saffola Peanut Butter 340 g,Saffola,Breakfast & Condiments,jar,340,g,160,True,Demo catalogue item: Saffola Peanut Butter 340 g.,INR,True
+PRD095,DS-0095,Corn Flakes 250 g,Kelloggs,Breakfast & Condiments,packet,250,g,115,True,Demo catalogue item: Corn Flakes 250 g.,INR,True
+PRD096,DS-0096,Pasta 500 g,Local,Breakfast & Condiments,packet,500,g,65,True,Demo catalogue item: Pasta 500 g.,INR,True
+PRD097,DS-0097,Tomato Soup 45 g,Knorr,Breakfast & Condiments,packet,45,g,20,True,Demo catalogue item: Tomato Soup 45 g.,INR,True
+PRD098,DS-0098,Baking Soda 100 g,Local,Breakfast & Condiments,packet,100,g,20,True,Demo catalogue item: Baking Soda 100 g.,INR,True
+PRD099,DS-0099,Vinegar 500 ml,Local,Breakfast & Condiments,bottle,500,ml,45,True,Demo catalogue item: Vinegar 500 ml.,INR,True
+PRD100,DS-0100,Peanut Chikki 100 g,Local,Breakfast & Condiments,packet,100,g,30,True,Demo catalogue item: Peanut Chikki 100 g.,INR,True
