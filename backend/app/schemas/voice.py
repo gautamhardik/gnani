@@ -63,3 +63,4 @@ class AudioMetadata(BaseModel):
     channels: int
     bit_depth: Optional[int] = None
     file_size_bytes: int
+

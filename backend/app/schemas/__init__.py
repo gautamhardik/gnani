@@ -13,12 +13,15 @@ from backend.app.schemas.order import (
     OrderSessionCreate,
     OrderSessionUpdate,
     OrderSessionResponse,
+    UpdateCartItemRequest,
+    OrderSessionDetailResponse,
     OrderItemCreate,
     OrderItemResponse,
     OrderCreateRequest,
     OrderRejectRequest,
     OrderResponse,
 )
+from backend.app.schemas.store import StoreResponse
 from backend.app.schemas.intelligence import (
     IntentType,
     DialogueState,
@@ -53,6 +56,9 @@ __all__ = [
     "OrderSessionCreate",
     "OrderSessionUpdate",
     "OrderSessionResponse",
+    "UpdateCartItemRequest",
+    "OrderSessionDetailResponse",
+    "StoreResponse",
     "OrderItemCreate",
     "OrderItemResponse",
     "OrderCreateRequest",

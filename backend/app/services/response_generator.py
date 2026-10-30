@@ -164,3 +164,4 @@ class AssistantResponseGenerator:
             return action.message
 
         return f"Theek hai, aapka cart update kar diya gaya hai. Total {total_spoken} hua."
+

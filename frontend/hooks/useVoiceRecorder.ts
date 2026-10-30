@@ -1,0 +1,270 @@
+"use client";
+
+/**
+ * DukaanSaathi — useVoiceRecorder Hook
+ * Reusable MediaRecorder hook with cross-browser permission handling,
+ * live waveform analyzer, duration limits, and graceful cleanup.
+ */
+
+import { useState, useRef, useCallback, useEffect } from "react";
+
+export type RecorderState =
+  | "ready"
+  | "recording"
+  | "processing"
+  | "speaking"
+  | "permission_denied"
+  | "error";
+
+export interface VoiceRecordingResult {
+  blob: Blob;
+  mimeType: string;
+  durationSeconds: number;
+}
+
+interface UseVoiceRecorderOptions {
+  maxDurationSeconds?: number;
+  onMaxDurationReached?: () => void;
+}
+
+export function useVoiceRecorder({
+  maxDurationSeconds = 60,
+  onMaxDurationReached,
+}: UseVoiceRecorderOptions = {}) {
+  const [status, setStatus] = useState<RecorderState>("ready");
+  const [duration, setDuration] = useState<number>(0);
+  const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(0);
+
+  // Detect supported browser MIME types
+  const getSupportedMimeType = useCallback((): string => {
+    if (typeof window === "undefined" || !window.MediaRecorder) {
+      return "audio/webm";
+    }
+    const candidates = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/ogg;codecs=opus",
+      "audio/mp4",
+      "audio/wav",
+    ];
+    for (const c of candidates) {
+      if (MediaRecorder.isTypeSupported(c)) {
+        return c;
+      }
+    }
+    return "";
+  }, []);
+
+  // Cleanup helper
+  const cleanupTracksAndNodes = useCallback(() => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    setAudioLevel(0);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      cleanupTracksAndNodes();
+    };
+  }, [cleanupTracksAndNodes]);
+
+  // Audio level visualizer loop
+  const startAudioAnalysis = (stream: MediaStream) => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+
+      const audioCtx = new AudioCtx();
+      audioContextRef.current = audioCtx;
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyserRef.current = analyser;
+
+      const source = audioCtx.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      const tick = () => {
+        if (!analyserRef.current) return;
+        analyserRef.current.getByteFrequencyData(dataArray);
+
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
+        const avg = sum / bufferLength;
+        const normalized = Math.min(1, avg / 128); // 0 to 1
+        setAudioLevel(normalized);
+
+        animationFrameRef.current = requestAnimationFrame(tick);
+      };
+      tick();
+    } catch {
+      // AudioContext may fail in some locked environments
+    }
+  };
+
+  const startRecording = useCallback(async () => {
+    setErrorMessage(null);
+    audioChunksRef.current = [];
+    setDuration(0);
+
+    if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setStatus("error");
+      setErrorMessage("Microphone audio recording is not supported in this browser.");
+      return false;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      streamRef.current = stream;
+
+      const mimeType = getSupportedMimeType();
+      const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
+      const recorder = new MediaRecorder(stream, options);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.start(100); // 100ms timeslices for smooth chunking
+      setStatus("recording");
+      startTimeRef.current = Date.now();
+
+      startAudioAnalysis(stream);
+
+      // Duration timer & max limit check
+      timerIntervalRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        setDuration(elapsed);
+
+        if (elapsed >= maxDurationSeconds) {
+          if (onMaxDurationReached) {
+            onMaxDurationReached();
+          }
+        }
+      }, 250);
+
+      return true;
+    } catch (err: any) {
+      cleanupTracksAndNodes();
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        setStatus("permission_denied");
+        setErrorMessage(
+          "Microphone permission was denied. Please allow microphone access in your browser settings to speak your order."
+        );
+      } else {
+        setStatus("error");
+        setErrorMessage(
+          err.message || "Failed to access microphone. Please check your audio settings."
+        );
+      }
+      return false;
+    }
+  }, [cleanupTracksAndNodes, getSupportedMimeType, maxDurationSeconds, onMaxDurationReached]);
+
+  const stopRecording = useCallback((): Promise<VoiceRecordingResult | null> => {
+    return new Promise((resolve) => {
+      const recorder = mediaRecorderRef.current;
+      if (!recorder || recorder.state === "inactive") {
+        cleanupTracksAndNodes();
+        setStatus("ready");
+        resolve(null);
+        return;
+      }
+
+      const totalDuration = Math.max(
+        0.5,
+        (Date.now() - startTimeRef.current) / 1000
+      );
+
+      recorder.onstop = () => {
+        const mime = recorder.mimeType || "audio/webm";
+        const finalBlob = new Blob(audioChunksRef.current, { type: mime });
+        cleanupTracksAndNodes();
+
+        if (finalBlob.size === 0) {
+          setStatus("ready");
+          resolve(null);
+          return;
+        }
+
+        resolve({
+          blob: finalBlob,
+          mimeType: mime,
+          durationSeconds: totalDuration,
+        });
+      };
+
+      try {
+        recorder.stop();
+      } catch {
+        cleanupTracksAndNodes();
+        setStatus("ready");
+        resolve(null);
+      }
+    });
+  }, [cleanupTracksAndNodes]);
+
+  const cancelRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.onstop = null;
+      try {
+        recorder.stop();
+      } catch {}
+    }
+    cleanupTracksAndNodes();
+    audioChunksRef.current = [];
+    setDuration(0);
+    setStatus("ready");
+  }, [cleanupTracksAndNodes]);
+
+  return {
+    status,
+    setStatus,
+    isRecording: status === "recording",
+    duration,
+    audioLevel,
+    errorMessage,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+  };
+}
+

@@ -71,6 +71,17 @@ Every architectural decision and engineering implementation in DukaanSaathi adhe
   4. Audio Retrieval & Playback: Cache generated Timbre TTS speech buffers in memory with unique `audio_id` tokens, exposed via `GET /api/v1/voice/audio/{audio_id}` with proper `audio/wav` streaming headers.
 - **Consequence:** High reliability across all browser audio formats, robust ingestion of mixed Devanagari/Latin transcripts, zero credit waste on malformed uploads, and rapid audio playback delivery.
 
+### ADR-006: Mobile-First Conversational Web Architecture, Authoritative Session Synchronization, and Browser Audio Resilience
+- **Status:** Accepted (2026-10-30)
+- **Context:** Customer mobile voice ordering requires cross-browser audio capture (iOS/Android/Desktop), responsive accessibility standards, resilient audio playback handling against browser autoplay restrictions, and strict two-phase commit business rule guarantees (customer confirmation creates pending order; stock deduction is strictly deferred to merchant acceptance). Client-side price invention or optimistic mutations violate inventory integrity.
+- **Decision:**
+  1. Build decoupled Next.js 14 App Router frontend with Tailwind CSS and Lucide React under `frontend/`.
+  2. Implement `useVoiceRecorder` hook leveraging `MediaRecorder` with graceful format detection, dynamic frequency analyzer waveform, and 60-second turn enforcement.
+  3. Implement `useAudioPlayer` with autoplay block detection, providing fallback manual listen buttons ("Awaz sunein") when automatic audio playback is prevented by browser policy.
+  4. Authoritative Cart & Session API: Implement dedicated backend customer session lifecycle endpoints (`POST /api/v1/sessions`, `GET /api/v1/sessions/{id}`, `PUT /api/v1/sessions/{id}/cart/items/{product_id}`, `DELETE ...`) and store profile endpoint (`GET /api/v1/stores/{id}`). Any manual UI quantity adjustment is verified by the backend against database stock and price.
+  5. Two-Phase Order Creation: Customer confirmation calls `POST /api/v1/orders`, setting status to `pending` without decrementing inventory.
+- **Consequence:** Clean decoupling, zero client-side price or stock hallucination, 100% accessible mobile experience, and full compatibility across devices.
+
 ---
 
 ## 4. Chronological Development Log
@@ -440,6 +451,108 @@ Bridging the deterministic Phase 3 order engine to real human voices requires a 
    - *Error:* `UnicodeEncodeError: 'charmap' codec can't encode characters` when printing Hindi transcripts to stdout in `run_live_voice_benchmark.py`.
    - *Fix:* Added `sys.stdout.reconfigure(encoding="utf-8")` and `sys.stderr.reconfigure(encoding="utf-8")`.
 
+### Phase 5: Customer Mobile Web Interface
+**Date:** 2026-10-30  
+**Status:** Completed & Validated (110/110 Automated Tests: 90 Backend/Voice + 20 Vitest Frontend)
+
+#### 1. Request & Context
+Build a polished, responsive, mobile-first Next.js customer application connected to the live voice-ordering backend. Implement Customer Store Home, Voice Ordering, Authoritative Cart, and Two-Phase Order Confirmation screens. Add reusable `useVoiceRecorder` and `useAudioPlayer` hooks. Connect to FastAPI backend endpoints with zero browser credential exposure. Ensure authoritative database pricing and strict preservation of the two-phase commit order invariant (customer confirmation creates pending order; stock deduction is strictly deferred to merchant acceptance).
+
+#### 2. Rationale
+Vernacular kirana commerce demands an intuitive, highly accessible mobile touchpoint that requires zero typing. The client application must handle real-world browser audio constraints (MediaRecorder API, Opus/WebM encoding, browser autoplay restrictions) while ensuring 100% price integrity by communicating strictly with backend database-backed APIs.
+
+#### 3. Actions Performed
+- Backend Extensions:
+  - Added `backend/app/schemas/store.py` (`StoreResponse`) and `GET /api/v1/stores/{store_id}` returning store identity, open/closed status, operating hours, and language preferences.
+  - Added `backend/app/api/v1/sessions.py` with `POST /api/v1/sessions` (session lifecycle creation), `GET /api/v1/sessions/{session_id}` (authoritative cart retrieval), `PUT /api/v1/sessions/{session_id}/cart/items/{product_id}` (manual item quantity adjustments with stock validation), and `DELETE /api/v1/sessions/{session_id}/cart/items/{product_id}` (item removal).
+  - Mounted `sessions_router` and `stores_router` in `backend/app/api/v1/router.py`.
+  - Added unit test suites `tests/backend/test_sessions_api.py` and `tests/backend/test_stores_api.py`.
+- Next.js Mobile Web Client Architecture:
+  - Scaffolded `frontend/` using Next.js 14 App Router, TypeScript, Tailwind CSS, and Lucide React.
+  - Implemented semantic design system in `frontend/tailwind.config.ts` (`dukaan-*` tokens: terracotta primary `#C2410C`, warm cream canvas `#FAF8F5`, stone neutrals, emerald verification badges).
+  - Configured accessible keyboard focus outlines, WCAG contrast standards, and touch targets (≥44px).
+- Reusable Hooks:
+  - `useVoiceRecorder` (`frontend/hooks/useVoiceRecorder.ts`): Cross-browser `MediaRecorder` hook with auto-detected MIME type (`audio/webm`, `audio/ogg`, `audio/mp4`, `audio/wav`), dynamic audio frequency level analyzer (`AudioContext` + `AnalyserNode`), recording timer, 60-second limit enforcement, and permission error handling.
+  - `useAudioPlayer` (`frontend/hooks/useAudioPlayer.ts`): Manages playback of assistant speech responses via `GET /api/v1/voice/audio/{audio_id}`. Detects browser autoplay policy blocks (`NotAllowedError`) and exposes user-driven manual audio play triggers ("Awaz sunein").
+- Screen Components:
+  - `Header` (`frontend/components/Header.tsx`): Store identity branding, real-time open/closed status badge, language dropdown (Hindi/Hinglish/English), and cart item counter badge.
+  - `StoreHomeView` (`frontend/components/StoreHomeView.tsx`): Welcome hero card, operating hours, spoken utterance examples, and primary "Awaaz Se Order Shuru Karein" CTA.
+  - `VoiceOrderingView` (`frontend/components/VoiceOrderingView.tsx`): Accessible mic controls, live audio level waveform (`Waveform.tsx`), timer, cancel/submit actions, processing loader, conversation transcript (`TranscriptList.tsx`), assistant speech playback, and clickable clarification chips.
+  - `CartView` (`frontend/components/CartView.tsx`): Authoritative server-backed cart items, unit prices, package sizes, subtotals, quantity steppers, item deletion, and grand total.
+  - `ConfirmationModal` (`frontend/components/ConfirmationModal.tsx`): Itemized order preview, server-calculated total, and explicit submission creating a `pending` order request.
+  - `OrderSuccessView` (`frontend/components/OrderSuccessView.tsx`): Success screen with Order ID, `Pending Shopkeeper Approval` badge, item summary, and new order action.
+- End-to-End Verification & Screenshots:
+  - Executed automated Vitest test suite (`frontend/__tests__/`): 20/20 passing tests across API client, hooks, and UI components.
+  - Executed automated backend pytest regression suite: 90/90 passing tests.
+  - Built optimized Next.js production bundle (`next build`) with 0 lint or TypeScript errors.
+  - Spun up production server and captured high-resolution headless mobile screenshots (`docs/screenshots/01_store_home.png`, `02_voice_ordering.png`, `03_cart_view.png`).
+  - Created interactive walkthrough artifact [`phase_5_customer_ui.md`](file:///C:/Users/hiten/.gemini/antigravity/brain/d4799f2e-b141-45ee-951d-ff4debf65eaf/phase_5_customer_ui.md).
+
+#### 4. Files Created / Modified
+- `backend/app/schemas/store.py` (Created)
+- `backend/app/schemas/order.py` (Updated: added UpdateCartItemRequest, OrderSessionDetailResponse)
+- `backend/app/schemas/__init__.py` (Updated)
+- `backend/app/api/v1/stores.py` (Created)
+- `backend/app/api/v1/sessions.py` (Created)
+- `backend/app/api/v1/router.py` (Updated: mounted sessions and stores)
+- `tests/backend/test_sessions_api.py` (Created: 3 unit tests)
+- `tests/backend/test_stores_api.py` (Created: 2 unit tests)
+- `frontend/package.json` (Created)
+- `frontend/tailwind.config.ts` (Created)
+- `frontend/vitest.config.ts` (Created)
+- `frontend/test-setup.ts` (Created)
+- `frontend/.env.example` & `frontend/.env.local` (Created)
+- `frontend/types/api.ts` (Created)
+- `frontend/lib/api.ts` (Created)
+- `frontend/hooks/useVoiceRecorder.ts` (Created)
+- `frontend/hooks/useAudioPlayer.ts` (Created)
+- `frontend/components/Header.tsx` (Created)
+- `frontend/components/Waveform.tsx` (Created)
+- `frontend/components/TranscriptList.tsx` (Created)
+- `frontend/components/StoreHomeView.tsx` (Created)
+- `frontend/components/VoiceOrderingView.tsx` (Created)
+- `frontend/components/CartView.tsx` (Created)
+- `frontend/components/ConfirmationModal.tsx` (Created)
+- `frontend/components/OrderSuccessView.tsx` (Created)
+- `frontend/app/layout.tsx` (Created)
+- `frontend/app/page.tsx` (Created)
+- `frontend/app/globals.css` (Created)
+- `frontend/__tests__/api.test.ts` (Created: 7 tests)
+- `frontend/__tests__/useAudioPlayer.test.ts` (Created: 4 tests)
+- `frontend/__tests__/useVoiceRecorder.test.ts` (Created: 4 tests)
+- `frontend/__tests__/components.test.tsx` (Created: 5 tests)
+- `docs/screenshots/01_store_home.png` (Captured)
+- `docs/screenshots/02_voice_ordering.png` (Captured)
+- `docs/screenshots/03_cart_view.png` (Captured)
+- `docs/PROJECT_CHRONICLE.md` (Updated)
+
+#### 5. Verification Results
+- **Frontend Automated Tests (Vitest):** 20/20 passed in 1.91s.
+- **Backend Automated Tests (Pytest):** 90/90 passed in 13.41s across all suites.
+- **Next.js Production Build:** `next build` compiled cleanly into static/server chunks with 0 errors.
+- **Two-Phase Commit Invariant:** Verified that customer order confirmation creates `pending` status without deducting stock.
+- **Phase 5 Completion Gate:** Fully passed.
+
+#### 6. Errors & Fixes Log
+1. **Store Name Assertion Mismatch in Backend Test**:
+   - *Error:* `test_get_demo_store` asserted `"Sharma General Store"`, but seeded store name was `"Sharma General Store (Demo)"`.
+   - *Fix:* Updated assertion to check `"Sharma General Store" in data["store_name"]`.
+2. **Atta Price vs Subtotal Assertion**:
+   - *Error:* `test_update_and_remove_cart_item` asserted `42.00` for 3 units of PRD001, but PRD001 is Loose Wheat Flour @ 42.00 INR/kg (3kg = 126.00 INR).
+   - *Fix:* Corrected test assertions to match authoritative catalogue price (`126.00` and `210.00`).
+3. **Vitest Mock Constructor Invocation on Global Audio**:
+   - *Error:* `TypeError: () => mockAudioInstance is not a constructor` when `useAudioPlayer` called `new Audio()`.
+   - *Fix:* Replaced arrow function mock with ES6 class `MockAudio` in Vitest test harness.
+4. **MediaRecorder Constructor Mock in Vitest**:
+   - *Error:* Vitest warned and failed on arrow mock for `MediaRecorder`.
+   - *Fix:* Implemented ES6 `class MockMediaRecorder` with static `isTypeSupported`.
+5. **Duplicate Subtotal Text Query in Component Test**:
+   - *Error:* `TestingLibraryElementError: Found multiple elements with the text: ₹126.00`.
+   - *Fix:* Switched query to `screen.getAllByText("₹126.00")`.
+6. **Next.js Build ESLint Strict Rules**:
+   - *Error:* `next build` failed due to unused variables and `any` types in `api.ts`, `page.tsx`, and component interfaces.
+   - *Fix:* Cleaned up unused imports/props and replaced `any` with `unknown` with safe type guards.
+
 ---
 
 ## 5. Current Repository & Asset Inventory
@@ -471,6 +584,8 @@ C:\Users\hiten\Downloads\gnani
 │   │   │           orders.py
 │   │   │           products.py
 │   │   │           router.py
+│   │   │           sessions.py
+│   │   │           stores.py
 │   │   │           voice.py
 │   │   │           __init__.py
 │   │   ├───core
@@ -493,6 +608,7 @@ C:\Users\hiten\Downloads\gnani
 │   │   │       inventory.py
 │   │   │       order.py
 │   │   │       product.py
+│   │   │       store.py
 │   │   │       voice.py
 │   │   │       __init__.py
 │   │   └───services
@@ -538,10 +654,46 @@ C:\Users\hiten\Downloads\gnani
 │   └───scripts
 │           seed_postgres.py
 ├───docs
-│       phase_4_voice_benchmark_results.json
-│       PHASE_1_FEASIBILITY_REPORT.md
-│       PRD.md
-│       PROJECT_CHRONICLE.md
+│   │   phase_4_voice_benchmark_results.json
+│   │   PHASE_1_FEASIBILITY_REPORT.md
+│   │   PRD.md
+│   │   PROJECT_CHRONICLE.md
+│   └───screenshots
+│           01_store_home.png
+│           02_voice_ordering.png
+│           03_cart_view.png
+├───frontend
+│   │   .env.example
+│   │   package.json
+│   │   postcss.config.mjs
+│   │   tailwind.config.ts
+│   │   tsconfig.json
+│   │   vitest.config.ts
+│   │   test-setup.ts
+│   ├───app
+│   │       globals.css
+│   │       layout.tsx
+│   │       page.tsx
+│   ├───components
+│   │       CartView.tsx
+│   │       ConfirmationModal.tsx
+│   │       Header.tsx
+│   │       OrderSuccessView.tsx
+│   │       StoreHomeView.tsx
+│   │       TranscriptList.tsx
+│   │       Waveform.tsx
+│   ├───hooks
+│   │       useAudioPlayer.ts
+│   │       useVoiceRecorder.ts
+│   ├───lib
+│   │       api.ts
+│   ├───types
+│   │       api.ts
+│   └───__tests__
+│           api.test.ts
+│           components.test.tsx
+│           useAudioPlayer.test.ts
+│           useVoiceRecorder.test.ts
 └───tests
     │   conftest.py
     │   __init__.py
@@ -552,6 +704,8 @@ C:\Users\hiten\Downloads\gnani
     │       test_orders_and_business_rules.py
     │       test_products_api.py
     │       test_seed_validation.py
+    │       test_sessions_api.py
+    │       test_stores_api.py
     ├───gnani
     │       test_prisma.py
     │       test_timbre.py
@@ -587,9 +741,10 @@ C:\Users\hiten\Downloads\gnani
 - **Phase 2 (Product Architecture & Data Foundation):** Complete & verified with 17 passing automated tests. All 100 products, 306 aliases, and inventory records loaded with full constraint verification.
 - **Phase 3 (Core Order Intelligence Engine):** Complete & verified. All 7 services implemented, `POST /api/v1/intelligence/process-turn` operational, 57 automated tests passing in 2.2s. Starter pack benchmark achieved 96.7% action accuracy, 93.5% product/qty accuracy, 100% (5/5) conversation scenario completion, and 0 oversell violations.
 - **Phase 4 (Audio Pipeline & Voice Turn Integration):** Complete & verified. Resilient audio ingestion, format validation, WebM/Opus transcoding, live Prisma v3 STT integration, Devanagari transliteration bridging, zero-hallucination assistant response generator, live Timbre v2.5 TTS synthesis, in-memory audio caching, and request idempotency. 85/85 automated tests passing. 10-turn live voice benchmark achieved 10/10 successes with playable audio (median total turn latency 2.76s) and strict two-phase commit preservation (0 stock deducted).
+- **Phase 5 (Customer Mobile Web Interface):** Complete & verified. Built polished, mobile-first Next.js 14 application with warm-neutral vernacular commerce design tokens, `useVoiceRecorder` (live waveform analyzer, 60s cap, cross-browser MIME detection), `useAudioPlayer` (autoplay block detection and fallback controls), authoritative backend cart synchronization, itemized review modal, and two-phase pending order placement. 110 automated tests passing (90 Python pytest + 20 Next.js Vitest).
 
-### Immediate Next Steps (Phase 5: Customer Mobile Web Interface)
-1. **Next.js Mobile-First Web Client:** Establish Next.js application tailored for mobile browsers with high-contrast UI and Hindi/Hinglish labels.
-2. **Audio Recorder Hook:** Implement cross-browser MediaRecorder hook (recording WebM/Opus or WAV) with visual recording feedback, audio waveform, and error resilience.
-3. **Live Voice Turn Loop:** Wire the audio recorder to `POST /api/v1/voice/sessions/{session_id}/turn` and auto-play the assistant's synthesized response audio via `GET /api/v1/voice/audio/{audio_id}`.
-4. **Interactive Spoken Cart:** Render dynamic cart items, quantity controls, clarification prompt dialogs, and the final order confirmation trigger.
+### Immediate Next Steps (Phase 6: Shopkeeper Merchant Dashboard & Operations Interface)
+1. **Merchant Operations Portal:** Dedicated dashboard for shopkeepers to review incoming pending voice orders in real time.
+2. **Order Lifecycle Transitions:** Action buttons for merchant `Accept` (triggers atomic inventory check and stock deduction) and `Reject` (with documented cancellation reasons).
+3. **Live Inventory Editor:** Simple interface for shopkeepers to adjust stock quantities, toggle product active status, and modify retail prices.
+4. **Order Status Polling & Notifications:** Low-latency feed updates for incoming customer orders.

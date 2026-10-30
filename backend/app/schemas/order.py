@@ -29,6 +29,22 @@ class OrderSessionResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+class UpdateCartItemRequest(BaseModel):
+    quantity: Decimal = Field(..., ge=0, description="New quantity. Set to 0 to remove item.")
+
+class OrderSessionDetailResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    session_id: str
+    store_id: str
+    customer_id: Optional[str] = None
+    status: str
+    current_cart: List[Any]
+    total_amount: Decimal = Field(default=Decimal("0.00"))
+    item_count: int = Field(default=0)
+    created_at: datetime
+    updated_at: datetime
+
 class OrderItemCreate(BaseModel):
     product_id: str
     quantity: Decimal = Field(..., gt=0)
