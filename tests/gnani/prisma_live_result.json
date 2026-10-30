@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "request_id": "01a18d52-4413-7903-b63a-7bbc10dc2cdd",
+  "transcript": "भैया, दो पैकेट Maggi और एक किलो आशीर्वाद आटा देना।",
+  "model": "prisma-v3.0",
+  "processing_time": 0.46097826957702637,
+  "end_to_end_latency": 0.4627246856689453,
+  "detected_language_code": "hi-IN"
+}

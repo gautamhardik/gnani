@@ -2,10 +2,10 @@
 DukaanSaathi — Gnani Prisma Feasibility Prototype (Phase 1)
 Tests Speech-to-Text (ASR) with Hindi / Hinglish grocery orders.
 
-Supports:
-1. Official `gnani-vachana` SDK if installed.
-2. Direct REST API calls to Gnani API endpoints (`api.vachana.ai` / `api.gnani.ai`).
-3. Synthetic / Mock mode for local unit testing without active API credits.
+Requirements for Phase 1 Gate:
+- Live API response validation (does NOT silently report success on mock unless --mock is explicitly requested).
+- Sends audio to Gnani Prisma (vachana.ai STT v3) with indic-auto / hi-IN and codemix formatting.
+- Measures latency, HTTP response codes, and verifies returned transcript.
 """
 
 import os
@@ -13,57 +13,71 @@ import sys
 import json
 import time
 from pathlib import Path
+import urllib.request
+import urllib.error
 
-def test_prisma_transcription(audio_file_path: str, model_version: str = "prisma-v3.0", language: str = "hi-IN"):
-    """
-    Sends an audio file to Gnani Prisma and benchmarks latency, transcript accuracy, and response structure.
-    """
+# Ensure UTF-8 output on Windows consoles
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
+def load_env():
+    """Simple standard library .env loader."""
+    for p in [Path(".env"), Path("../../.env"), Path("../.env")]:
+        if p.exists():
+            with open(p, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        os.environ.setdefault(k.strip(), v.strip())
+            break
+
+def test_prisma_transcription(
+    audio_file_path: str,
+    model_version: str = "prisma-v3.0",
+    language: str = "indic-auto",
+    format_mode: str = "codemix",
+    output_json_path: str = "tests/gnani/prisma_live_result.json",
+    force_mock: bool = False
+) -> dict:
+    load_env()
     api_key = os.getenv("GNANI_API_KEY")
-    api_url = os.getenv("GNANI_PRISMA_ENDPOINT", "https://api.vachana.ai/v1/speech/transcribe")
+    api_url = os.getenv("GNANI_PRISMA_ENDPOINT", "https://api.vachana.ai/stt/v3")
 
-    print("=" * 60)
-    print("DukaanSaathi: Gnani Prisma STT Feasibility Test")
-    print("=" * 60)
+    print("=" * 70)
+    print("DukaanSaathi: Gnani Prisma STT Live Verification (Phase 1)")
+    print("=" * 70)
     print(f"Target Audio: {audio_file_path}")
     print(f"Target Model: {model_version}")
     print(f"Language:     {language}")
+    print(f"Format Mode:  {format_mode}")
     print(f"Endpoint:     {api_url}")
-    print(f"API Key:      {'[CONFIGURED]' if api_key else '[MISSING - Set GNANI_API_KEY]'}")
-    print("-" * 60)
+    print(f"API Key:      {'[CONFIGURED - ' + api_key[:10] + '...]' if api_key else '[MISSING]'}")
+    print(f"Mode:         {'EXPLICIT MOCK' if force_mock else 'LIVE API VERIFICATION'}")
+    print("-" * 70)
 
-    if not api_key:
-        print("\n[WARNING] GNANI_API_KEY environment variable is not set.")
-        print("To run against live Gnani servers:")
-        print("  1. Copy .env.example to .env")
-        print("  2. Add your GNANI_API_KEY from the Gnani Console")
-        print("  3. Run: python tests/gnani/test_prisma.py <path_to_audio_file>")
-        print("\nExecuting dry-run validation against mock payload structure...")
-        
-        # Simulated response matching Gnani Prisma output format
+    # Explicit Mock Mode
+    if force_mock:
+        print("[MODE: MOCK] Returning synthetic transcript payload for offline test...")
         mock_response = {
-            "status": "success",
-            "model": model_version,
-            "language_detected": "hi-IN",
+            "success": True,
+            "mock": True,
+            "request_id": "mock-req-001",
             "transcript": "Bhaiya ek kilo chini aur do packet Maggi dena",
-            "confidence": 0.94,
-            "turnaround_time_ms": 782,
-            "words": [
-                {"word": "Bhaiya", "start": 0.1, "end": 0.4},
-                {"word": "ek", "start": 0.5, "end": 0.7},
-                {"word": "kilo", "start": 0.8, "end": 1.1},
-                {"word": "chini", "start": 1.2, "end": 1.6},
-                {"word": "aur", "start": 1.7, "end": 1.9},
-                {"word": "do", "start": 2.0, "end": 2.2},
-                {"word": "packet", "start": 2.3, "end": 2.7},
-                {"word": "Maggi", "start": 2.8, "end": 3.2},
-                {"word": "dena", "start": 3.3, "end": 3.6}
-            ]
+            "model": model_version,
+            "processing_time": 0.45,
+            "end_to_end_latency": 0.48,
+            "detected_language_code": "hi-IN"
         }
-        print(f"\n[MOCK RESULT] Transcribed: \"{mock_response['transcript']}\"")
-        print(f"[MOCK RESULT] Confidence:  {mock_response['confidence']}")
+        print(f"[MOCK SUCCESS] Transcribed: \"{mock_response['transcript']}\"")
         return mock_response
 
-    # Verify audio file exists
+    # Live Mode Pre-conditions
+    if not api_key:
+        print("\n[FATAL ERROR] Phase 1 Live Verification requires GNANI_API_KEY.")
+        print("Please configure GNANI_API_KEY in your .env file or environment.")
+        return None
+
     audio_path = Path(audio_file_path)
     if not audio_path.exists():
         print(f"[ERROR] Audio file not found at: {audio_file_path}")
@@ -74,54 +88,74 @@ def test_prisma_transcription(audio_file_path: str, model_version: str = "prisma
         import importlib
         gnani_stt = importlib.import_module("gnani.stt")
         GnaniSTTClient = getattr(gnani_stt, "GnaniSTTClient")
-        print("[INFO] Using gnani-vachana SDK...")
+        print("[SDK] gnani-vachana SDK found. Attempting client call...")
         client = GnaniSTTClient(api_key=api_key)
         start_time = time.time()
         result = client.transcribe(str(audio_path), model=model_version, language_code=language)
         latency_ms = (time.time() - start_time) * 1000
-        print(f"[SUCCESS] Latency: {latency_ms:.1f}ms")
-        print(f"[TRANSCRIPT] {result.get('transcript', '')}")
+        print(f"[SDK SUCCESS] Latency: {latency_ms:.1f}ms")
+        print(f"[SDK TRANSCRIPT] {result.get('transcript', '')}")
         return result
     except (ImportError, ModuleNotFoundError, AttributeError):
-        print("[INFO] gnani-vachana SDK not installed; falling back to direct HTTP REST request...")
+        print("[REST] gnani-vachana SDK not installed. Using direct Vachana REST API...")
     except Exception as e:
-        print(f"[WARNING] SDK call error: {e}. Falling back to direct HTTP REST request...")
+        print(f"[REST] SDK attempt exception: {e}. Falling back to direct REST API...")
 
-    # Direct REST call using requests / urllib
-    import urllib.request
-    import urllib.error
-
+    # Direct REST Call using multipart/form-data via requests / urllib
     start_time = time.time()
     try:
+        import requests
         headers = {
-            "Authorization": f"Bearer {api_key}",
-            "x-api-key": api_key
+            "X-API-Key-ID": api_key,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 DukaanSaathi/1.0"
         }
         with open(audio_path, "rb") as f:
-            audio_bytes = f.read()
+            files = {
+                "audio_file": (audio_path.name, f, "audio/wav")
+            }
+            data = {
+                "model": model_version,
+                "language_code": language,
+                "format": format_mode
+            }
+            resp = requests.post(api_url, headers=headers, files=files, data=data, timeout=30)
 
-        req = urllib.request.Request(
-            api_url,
-            data=audio_bytes,
-            headers={**headers, "Content-Type": "audio/wav"},
-            method="POST"
-        )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = resp.read().decode("utf-8")
-            latency_ms = (time.time() - start_time) * 1000
-            result = json.loads(data)
-            print(f"[SUCCESS] REST Latency: {latency_ms:.1f}ms")
-            print(f"[TRANSCRIPT] {result}")
+        latency_ms = (time.time() - start_time) * 1000
+
+        if resp.status_code == 200:
+            result = resp.json()
+            transcript = result.get("transcript", "")
+            detected_lang = result.get("detected_language_code", "unknown")
+            api_proc_time = result.get("processing_time", 0)
+
+            print("[LIVE SUCCESS] Audio transcribed successfully!")
+            print(f"               Transcript:       \"{transcript}\"")
+            print(f"               Detected Lang:    {detected_lang}")
+            print(f"               Server Proc Time: {api_proc_time * 1000:.1f}ms" if isinstance(api_proc_time, (int, float)) else f"               Server Proc Time: {api_proc_time}")
+            print(f"               Round-trip Time:  {latency_ms:.1f}ms")
+
+            # Persist result for verification audit
+            Path(output_json_path).parent.mkdir(parents=True, exist_ok=True)
+            with open(output_json_path, "w", encoding="utf-8") as jf:
+                json.dump(result, jf, indent=2, ensure_ascii=False)
+            print(f"               Saved report:     {output_json_path}")
+
             return result
-    except urllib.error.HTTPError as e:
-        print(f"[ERROR] HTTP Error {e.code}: {e.read().decode('utf-8')}")
+        else:
+            print(f"\n[LIVE API ERROR] HTTP {resp.status_code}: {resp.text}")
+            return None
+
     except Exception as e:
-        print(f"[ERROR] Connection failure: {e}")
-
-    return None
-
+        print(f"\n[CONNECTION ERROR] {e}")
+        return None
 
 if __name__ == "__main__":
-    audio_arg = sys.argv[1] if len(sys.argv) > 1 else "data/audio/sample_order.wav"
-    test_prisma_transcription(audio_arg)
+    force_mock_mode = "--mock" in sys.argv
+    audio_arg = "tests/gnani/output_timbre.wav"
+    for arg in sys.argv[1:]:
+        if not arg.startswith("--"):
+            audio_arg = arg
+            break
 
+    res = test_prisma_transcription(audio_arg, force_mock=force_mock_mode)
+    sys.exit(0 if res and res.get("success") else 1)
