@@ -96,3 +96,10 @@ def test_merchant_update_and_deactivate_product(client, merchant_headers):
     # Verify inactive
     get_resp = client.get("/api/v1/products/PRD001")
     assert get_resp.json()["is_active"] is False
+
+    # Restore PRD001 for subsequent test suites
+    client.put(
+        "/api/v1/products/PRD001",
+        headers=merchant_headers,
+        json={"price_inr": 42.00, "is_active": True}
+    )

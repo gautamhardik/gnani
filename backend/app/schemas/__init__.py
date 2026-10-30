@@ -19,6 +19,18 @@ from backend.app.schemas.order import (
     OrderRejectRequest,
     OrderResponse,
 )
+from backend.app.schemas.intelligence import (
+    IntentType,
+    DialogueState,
+    ClarificationType,
+    NormalizedTranscript,
+    ExtractedQuantity,
+    ProductMatchCandidate,
+    ProductMatchResult,
+    CartItem,
+    TurnAction,
+    TurnResponse,
+)
 
 __all__ = [
     "PaginatedResponse",
@@ -40,4 +52,15 @@ __all__ = [
     "OrderCreateRequest",
     "OrderRejectRequest",
     "OrderResponse",
+    "IntentType",
+    "DialogueState",
+    "ClarificationType",
+    "NormalizedTranscript",
+    "ExtractedQuantity",
+    "ProductMatchCandidate",
+    "ProductMatchResult",
+    "CartItem",
+    "TurnAction",
+    "TurnResponse",
 ]
+
