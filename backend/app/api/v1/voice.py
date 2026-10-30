@@ -7,6 +7,7 @@ and Gnani Timbre TTS delivery.
 
 import base64
 import logging
+import re
 import time
 import uuid
 from typing import Dict, Optional, Tuple
@@ -17,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_db
 from backend.app.core.config import settings
+from backend.app.core.rate_limiter import enforce_rate_limit
 from backend.app.models import OrderSession, Store
 from backend.app.schemas.intelligence import IntentType, DialogueState
 from backend.app.schemas.voice import (
@@ -51,7 +53,8 @@ async def process_voice_turn(
     client_turn_id: Optional[str] = Form(None),
     include_audio_base64: bool = Form(False),
     force_mock: bool = Form(False),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: bool = Depends(enforce_rate_limit("voice_turn", max_requests=40, window_seconds=60))
 ):
     """
     Main voice-first turn endpoint:
@@ -287,7 +290,14 @@ async def process_voice_turn(
 def get_synthesized_audio(audio_id: str):
     """
     Serves synthesized WAV audio directly to browser <audio> tags or mobile clients.
+    Guards against path traversal or malicious injection in the identifier.
     """
+    if not re.match(r"^[a-zA-Z0-9_\-]{4,64}$", audio_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid audio identifier format. Only alphanumeric, hyphen, and underscore characters are allowed."
+        )
+
     audio_bytes = TimbreTTSService.get_cached_audio(audio_id)
     if not audio_bytes:
         raise HTTPException(

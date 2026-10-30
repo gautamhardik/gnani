@@ -186,3 +186,21 @@ export async function submitOrder(
   });
   return handleResponse<Order>(res);
 }
+
+/**
+ * Retrieve order details for a customer session.
+ * Requires matching session_id for authorization.
+ */
+export async function getCustomerOrder(
+  orderId: string,
+  sessionId: string
+): Promise<Order> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/v1/orders/${orderId}?session_id=${encodeURIComponent(sessionId)}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+  return handleResponse<Order>(res);
+}

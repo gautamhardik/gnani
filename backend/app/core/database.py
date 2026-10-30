@@ -5,11 +5,21 @@ if local PostgreSQL daemon is not running.
 """
 
 import logging
+import re
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from backend.app.core.config import settings
 
 logger = logging.getLogger("dukaansaathi.database")
+
+
+def sanitize_db_url(url: str) -> str:
+    """
+    Masks user credentials in database connection strings
+    to prevent password disclosure in logs, exceptions, and monitoring feeds.
+    """
+    return re.sub(r"://([^:]+):([^@]+)@", r"://\1:******@", url)
+
 
 def get_database_url() -> str:
     url = settings.DATABASE_URL
@@ -19,8 +29,10 @@ def get_database_url() -> str:
         return url.replace("postgresql://", "postgresql+psycopg2://", 1)
     return url
 
+
 def get_engine():
     url = get_database_url()
+    safe_url = sanitize_db_url(url)
 
     connect_args = {}
     if url.startswith("sqlite"):
@@ -36,18 +48,18 @@ def get_engine():
     except Exception as e:
         if settings.APP_ENV.lower() in ("staging", "production"):
             logger.error(
-                f"[DATABASE ERROR] Critical: Cannot connect to PostgreSQL in {settings.APP_ENV} environment: {e}. "
+                f"[DATABASE ERROR] Critical: Cannot connect to PostgreSQL in {settings.APP_ENV} environment: {type(e).__name__}. "
                 "Silent fallback to SQLite is strictly disabled in staging/production."
             )
             raise RuntimeError(
-                f"Database connection to '{url}' failed in {settings.APP_ENV} environment. "
+                f"Database connection to '{safe_url}' failed in {settings.APP_ENV} environment. "
                 "Silent SQLite fallback is strictly disabled in staging and production."
             ) from e
 
         if "localhost" in url or "127.0.0.1" in url:
             fallback_url = "sqlite:///./data/database/dukkaansaathi_dev.sqlite"
             logger.warning(
-                f"[DATABASE WARNING] Local PostgreSQL ({url}) connection failed: {e}. "
+                f"[DATABASE WARNING] Local PostgreSQL ({safe_url}) connection failed: {type(e).__name__}. "
                 f"Falling back to local SQLite: {fallback_url}"
             )
             print(f"[INFO] Local PostgreSQL unavailable on localhost; using SQLite fallback: {fallback_url}")

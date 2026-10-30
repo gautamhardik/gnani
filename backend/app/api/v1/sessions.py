@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from backend.app.api.deps import get_db
 from backend.app.core.config import settings
+from backend.app.core.rate_limiter import enforce_rate_limit
 from backend.app.models import OrderSession, Store, Product, StoreInventory
 from backend.app.schemas.order import (
     OrderSessionCreate,
@@ -26,7 +27,8 @@ router = APIRouter(prefix="/sessions", tags=["Customer Sessions"])
 @router.post("", response_model=OrderSessionResponse, status_code=status.HTTP_201_CREATED)
 def create_customer_session(
     session_in: OrderSessionCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: bool = Depends(enforce_rate_limit("create_session", max_requests=30, window_seconds=60))
 ):
     """
     Creates a new customer order session.

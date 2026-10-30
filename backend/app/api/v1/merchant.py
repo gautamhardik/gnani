@@ -3,9 +3,10 @@ DukaanSaathi — Merchant Operations & Overview Router
 Computes live operational metrics and dashboard statistics directly from authoritative database models.
 """
 
+from typing import Any, Dict
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 
@@ -21,7 +22,7 @@ router = APIRouter(prefix="/merchant", tags=["Merchant Operations"])
 def get_merchant_overview(
     store_id: str = settings.DEMO_STORE_ID,
     db: Session = Depends(get_db),
-    _: bool = Depends(get_current_merchant)
+    current_merchant: Dict[str, Any] = Depends(get_current_merchant)
 ):
     """
     Returns live operational metrics for the merchant dashboard:
@@ -31,8 +32,15 @@ def get_merchant_overview(
     - Realized gross sales in INR
     - Inventory alert counts (low stock / out of stock)
     - Recent orders feed
-    Never returns hardcoded or fabricated statistics.
+    Enforces store ownership verification.
     """
+    merchant_store = current_merchant.get("store_id")
+    if merchant_store and merchant_store != store_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Unauthorized: Merchant cannot access overview for store '{store_id}'"
+        )
+
     store = db.query(Store).filter(Store.store_id == store_id).first()
     store_name = store.store_name if store else "Sharma General Store"
 

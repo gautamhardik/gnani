@@ -115,6 +115,22 @@ export async function getMerchantMe(): Promise<MerchantMeResponse> {
 }
 
 /**
+ * Terminate merchant session and clear client credentials.
+ */
+export async function logoutMerchant(): Promise<void> {
+  try {
+    await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+    });
+  } catch {
+    // Ignore network failure on logout
+  } finally {
+    clearStoredToken();
+  }
+}
+
+/**
  * Merchant Dashboard Overview Metrics.
  */
 export async function getMerchantOverview(): Promise<MerchantOverviewResponse> {

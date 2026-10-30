@@ -1,11 +1,14 @@
+import secrets
 import uuid
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from decimal import Decimal
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 
 from backend.app.api.deps import get_db, get_current_merchant
 from backend.app.core.config import settings
+from backend.app.core.rate_limiter import enforce_rate_limit
+from backend.app.core.security import verify_merchant_token
 from backend.app.models import (
     Order,
     OrderItem,
@@ -140,9 +143,16 @@ def list_orders(
     order_status: Optional[str] = Query(None, alias="status"),
     store_id: str = settings.DEMO_STORE_ID,
     db: Session = Depends(get_db),
-    _: bool = Depends(get_current_merchant)
+    current_merchant: Dict[str, Any] = Depends(get_current_merchant)
 ):
-    """Lists orders with status filter (Merchant Dashboard Feed)."""
+    """Lists orders with status filter (Merchant Dashboard Feed). Enforces store authorization."""
+    merchant_store = current_merchant.get("store_id")
+    if merchant_store and merchant_store != store_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Unauthorized: Cannot access orders for store '{store_id}'"
+        )
+
     query = (
         db.query(Order)
         .options(joinedload(Order.items))
@@ -168,9 +178,18 @@ def list_orders(
 @router.get("/{order_id}", response_model=OrderResponse)
 def get_order(
     order_id: str,
+    session_id: Optional[str] = Query(None, description="Customer session ID to authorize order lookup"),
+    authorization: Optional[str] = Header(None),
+    x_merchant_token: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ):
-    """Retrieves order details, snapshotted prices, and items."""
+    """
+    Retrieves order details, snapshotted prices, and items.
+    Protected Authorization:
+    - Allowed if caller carries a valid merchant token for the store.
+    - Allowed if caller provides the matching customer session_id.
+    - Rejects unauthenticated enumeration attempts with 401/403.
+    """
     order = (
         db.query(Order)
         .options(joinedload(Order.items))
@@ -182,14 +201,38 @@ def get_order(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Order '{order_id}' not found"
         )
-    return order
+
+    # 1. Check merchant credentials if provided
+    is_merchant_authorized = False
+    if authorization or x_merchant_token:
+        try:
+            merchant_info = verify_merchant_token(authorization=authorization, x_merchant_token=x_merchant_token)
+            m_store = merchant_info.get("store_id")
+            if not m_store or m_store == order.store_id:
+                is_merchant_authorized = True
+        except HTTPException:
+            pass
+
+    if is_merchant_authorized:
+        return order
+
+    # 2. Check customer session ownership
+    if session_id and order.session_id and secrets.compare_digest(session_id, order.session_id):
+        return order
+
+    # 3. Unauthorized access
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Authentication required to inspect order details. Provide merchant authorization or matching session_id.",
+        headers={"WWW-Authenticate": "Bearer"}
+    )
 
 
 @router.post("/{order_id}/accept", response_model=OrderResponse)
 def accept_order(
     order_id: str,
     db: Session = Depends(get_db),
-    _: bool = Depends(get_current_merchant)
+    current_merchant: Dict[str, Any] = Depends(get_current_merchant)
 ):
     """
     Merchant Acceptance Endpoint:
@@ -210,6 +253,13 @@ def accept_order(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Order '{order_id}' not found"
+        )
+
+    merchant_store = current_merchant.get("store_id")
+    if merchant_store and merchant_store != order.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Unauthorized: Order belongs to store '{order.store_id}', not '{merchant_store}'"
         )
 
     if order.status != "pending":
@@ -264,7 +314,7 @@ def reject_order(
     order_id: str,
     reject_in: Optional[OrderRejectRequest] = None,
     db: Session = Depends(get_db),
-    _: bool = Depends(get_current_merchant)
+    current_merchant: Dict[str, Any] = Depends(get_current_merchant)
 ):
     """
     Merchant Rejection Endpoint:
@@ -276,6 +326,13 @@ def reject_order(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Order '{order_id}' not found"
+        )
+
+    merchant_store = current_merchant.get("store_id")
+    if merchant_store and merchant_store != order.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Unauthorized: Order belongs to store '{order.store_id}', not '{merchant_store}'"
         )
 
     if order.status != "pending":
@@ -298,7 +355,7 @@ def update_order_status(
     order_id: str,
     status_in: OrderStatusUpdateRequest,
     db: Session = Depends(get_db),
-    _: bool = Depends(get_current_merchant)
+    current_merchant: Dict[str, Any] = Depends(get_current_merchant)
 ):
     """
     Merchant Order Lifecycle Transition Endpoint:
@@ -319,6 +376,13 @@ def update_order_status(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Order '{order_id}' not found"
+        )
+
+    merchant_store = current_merchant.get("store_id")
+    if merchant_store and merchant_store != order.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Unauthorized: Order belongs to store '{order.store_id}', not '{merchant_store}'"
         )
 
     current_status = order.status

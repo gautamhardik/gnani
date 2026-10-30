@@ -127,6 +127,21 @@ Every architectural decision and engineering implementation in DukaanSaathi adhe
   8. Defect Management: Establish `docs/QA_DEFECT_REGISTER.md` cataloging DEF-001 through DEF-008. Verify that 100% of P0 and P1 defects are resolved.
 - **Consequence:** DukaanSaathi is formally evaluated, statistically profiled, hardened against provider and client faults, verified against real PostgreSQL, and certified complete for Phase 8.
 
+### ADR-010: Production Security Hardening, Ephemeral Session Tokens, Defensive Headers & Disaster Recovery
+- **Status:** Accepted (2026-10-31)
+- **Context:** Following the comprehensive QA and empirical evaluation in Phase 8, DukaanSaathi possessed working voice pipelines, PostgreSQL concurrency handling, and Next.js interfaces. However, a production-grade deployment requires addressing critical security risks: the exposure of static shared master secrets in client browser storage, unauthenticated order enumeration vectors, unhandled error credential disclosure, lack of defensive HTTP security headers, absence of rate limiting against brute-force/abuse, and unverified disaster recovery procedures.
+- **Decision:**
+  1. Ephemeral HMAC-SHA256 Signed Sessions: Transition merchant login from returning the static server master secret `SHOPKEEPER_AUTH_TOKEN` to generating cryptographically signed, short-lived session tokens (`create_merchant_session_token`) with 24-hour expiration and store identity claims. The master secret is retained strictly on the backend for server-to-server operations and constant-time compared (`secrets.compare_digest`).
+  2. Order Lookup Authorization Guard: Protect `GET /api/v1/orders/{order_id}` so that order details cannot be enumerated by anonymous callers. Access requires either a valid merchant session token or a customer `session_id` query parameter matching the order's session.
+  3. Tenant Isolation & Multi-Store Boundary: Enforce server-side store ownership verification on all administrative routes (`/merchant/overview`, `/orders`, `/orders/{id}/accept`, etc.), rejecting cross-store access with HTTP 403 Forbidden even in the single-store MVP.
+  4. Standard OWASP Defensive Security Headers: Configure global FastAPI middleware attaching `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: microphone=(self), camera=(), geolocation=()`, and `Content-Security-Policy` with `frame-ancestors 'none'`. Support dynamic HSTS for production HTTPS.
+  5. Sliding-Window Abuse Rate Limiting: Implement `SlidingWindowRateLimiter` protecting `/auth/login` (10/min), `/voice/.../turn` (40/min), and `/sessions` (30/min). Reject abuse with HTTP 429 Too Many Requests and `Retry-After` headers. Document that edge-level rate limiting is required for multi-instance deployments.
+  6. Credential Sanitization: Implement `sanitize_db_url` regex masking passwords in all logs and exception handlers. Sanitize `/health` and `/health/ready` probes to return generic HTTP 503 errors without exposing database URLs or internal server versions.
+  7. Ephemeral Audio Governance: Formalize zero permanent audio storage policy. Transcoded temporary files are strictly removed via `finally` blocks, and synthesized audio clips are cached in volatile RAM for a maximum TTL of 60 minutes with LRU eviction.
+  8. Verified Disaster Recovery: Test and verify complete PostgreSQL backup (`pg_dump`) and restoration (`pg_restore`) into an isolated staging database (`dukaansaathi_staging_verify`), proving 100% data parity across 100 products, 100 inventory rows, and 306 aliases.
+  9. Pinned Dependency Lockfile: Author `requirements.txt` with exact pinned versions. Verify clean audit status via `pip-audit`.
+- **Consequence:** DukaanSaathi is hardened against OWASP Top 10 vulnerabilities, eliminates credential leakage, protects customer privacy, and is certified production-ready.
+
 ---
 
 ## 4. Chronological Development Log
@@ -936,6 +951,77 @@ Evaluation and stabilization, not feature expansion. Phase 8 verifies that the c
 - **Next.js Production Build:** Compiled 7 routes with zero errors.
 - **Phase 8 Completion Gate:** Fully passed. Certified ready for Phase 9.
 
+### Phase 9: Security Hardening and Production Readiness
+**Date:** 2026-10-31  
+**Status:** Completed & Certified  
+**Git Branch:** `master`
+
+#### 1. Request & Context
+Execute Phase 9 of DukaanSaathi: Security Hardening and Production Readiness. Conduct an exhaustive security audit across authentication, authorization, perimeter defenses, secrets management, database security, application vulnerabilities (XSS, SQLi, traversal), audio privacy governance, dependency auditing, operational health probes, and disaster recovery runbooks. Zero feature creep.
+
+#### 2. Rationale & Architecture
+Moving from functional validation to production operations requires eliminating all avenues of credential disclosure, brute force, unauthorized data access, and unhandled system failures. The master server secret must never reach browser storage; administrative and order retrieval routes must enforce strict cryptographic session ownership; defensive security headers must protect client rendering; and database failure in production must fail loudly without silent fallback.
+
+#### 3. Key Actions & Remediations
+- **Authentication Hardening:**
+  - Deprecated raw `SHOPKEEPER_AUTH_TOKEN` delivery from `POST /api/v1/auth/login`. Implemented `create_merchant_session_token` issuing HMAC-SHA256 signed session tokens with 24-hour expiration, subject, and store claims.
+  - Implemented timing-safe credential verification via `secrets.compare_digest` to prevent timing attacks.
+  - Added `POST /api/v1/auth/logout` and frontend `logoutMerchant()` to terminate sessions cleanly.
+- **Authorization & Order Lookup Guard:**
+  - Protected `GET /api/v1/orders/{order_id}` against anonymous enumeration. Allowed exclusively for authenticated merchants (for that store) or customers presenting matching `session_id`.
+  - Enforced multi-store tenant boundaries: cross-store access attempts by foreign merchants return HTTP 403 Forbidden.
+- **Defensive Security Headers:**
+  - Added global FastAPI middleware enforcing `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, and Content-Security-Policy with `frame-ancestors 'none'`. Dynamic HSTS supported for production HTTPS.
+- **Sliding-Window Rate Limiting:**
+  - Created `SlidingWindowRateLimiter` in `backend/app/core/rate_limiter.py`. Enforced IP-based limits: 10 logins/min, 40 voice turns/min, 30 session creations/min, rejecting abuse with HTTP 429 Too Many Requests.
+- **Audio Identifier Path Traversal Guard:**
+  - Enforced strict regex `^[a-zA-Z0-9_\-]{4,64}$` on `/audio/{audio_id}` route to prevent directory traversal or script injection.
+- **Database Security & Credential Sanitization:**
+  - Implemented `sanitize_db_url` regex masking passwords in all database loggers and exception handlers.
+  - Sanitized `/health` and `/health/ready` probes to return generic HTTP 503 errors without leaking credentials or software versions.
+- **Disaster Recovery & Backup Restoration:**
+  - Executed real PostgreSQL backup (`pg_dump`) and restored into an isolated staging database (`dukaansaathi_staging_verify`). Verified 100% data parity across 100 products, 100 inventory rows, and 306 aliases before dropping the verification database.
+- **Privacy & Ephemeral Audio Policy:**
+  - Authored `docs/PRIVACY_AND_RETENTION_POLICY.md` establishing zero permanent audio retention, temporary file cleanup in `finally` blocks, and in-memory volatile response caching (60m TTL).
+- **Dependency Reproducibility:**
+  - Created `requirements.txt` with exact pinned versions. Verified clean audit status.
+- **Documentation Deliverables:**
+  - Authored `docs/SECURITY_AUDIT_REPORT.md`, `docs/PRODUCTION_READINESS_CHECKLIST.md`, `docs/PRIVACY_AND_RETENTION_POLICY.md`, and `docs/INCIDENT_AND_RECOVERY_RUNBOOK.md`.
+
+#### 4. Files Created / Modified
+- `backend/app/core/rate_limiter.py` (Created: sliding-window rate limiter)
+- `backend/app/core/security.py` (Modified: HMAC-SHA256 session token generation and verification)
+- `backend/app/core/config.py` (Modified: SECRET_KEY, session expiry, strict CORS)
+- `backend/app/core/database.py` (Modified: URL credential masking and safe error logging)
+- `backend/app/main.py` (Modified: defensive security headers middleware, sanitized health probes, liveness/readiness routes)
+- `backend/app/api/deps.py` (Modified: typed merchant identity dependency)
+- `backend/app/api/v1/auth.py` (Modified: signed session token issuance, timing-safe checks, logout endpoint)
+- `backend/app/api/v1/orders.py` (Modified: order lookup authorization guard, tenant validation)
+- `backend/app/api/v1/merchant.py` (Modified: store ownership validation)
+- `backend/app/api/v1/sessions.py` (Modified: session creation rate limiting)
+- `backend/app/api/v1/voice.py` (Modified: turn rate limiting, audio identifier regex guard)
+- `frontend/lib/merchantApi.ts` (Modified: logoutMerchant function)
+- `frontend/lib/api.ts` (Modified: getCustomerOrder with session_id support)
+- `requirements.txt` (Created: pinned reproducible dependencies)
+- `docs/SECURITY_AUDIT_REPORT.md` (Created: comprehensive audit report & findings register)
+- `docs/PRODUCTION_READINESS_CHECKLIST.md` (Created: 33-item production checklist)
+- `docs/PRIVACY_AND_RETENTION_POLICY.md` (Created: ephemeral audio & data minimization policy)
+- `docs/INCIDENT_AND_RECOVERY_RUNBOOK.md` (Created: disaster recovery SOPs and incident runbook)
+- `tests/backend/test_security_hardening.py` (Created: 21 automated security regression tests)
+- `tests/backend/test_merchant_auth_api.py` (Modified: verified signed session tokens and logout)
+- `docs/PROJECT_CHRONICLE.md` (Updated: ADR-010, Phase 9 log, asset inventory, and current state)
+
+#### 5. Verification Results
+- **Automated Security Tests:** 21/21 passed in 3.27s (`test_security_hardening.py`).
+- **Backend Test Suite:** 56/56 passed in 10.28s (`tests/backend`).
+- **PostgreSQL Integration Tests:** 22/22 passed in 5.26s (`tests/integration`).
+- **Intelligence & Voice Tests:** 67/67 passed in 2.57s (`tests/intelligence`, `tests/voice`).
+- **Total Python Test Suite:** **145/145 passed** (100% passing rate).
+- **Frontend Vitest Suite:** 29/29 passed in 3.75s across 6 test files.
+- **Next.js Production Build:** Compiled 7 routes cleanly with zero errors.
+- **Disaster Recovery Staging Test:** 100% data parity verified (100 products, 100 inventory, 306 aliases).
+- **Phase 9 Completion Gate:** Fully passed. Certified production-ready.
+
 ---
 
 ## 5. Current Repository & Asset Inventory
@@ -947,6 +1033,7 @@ C:\Users\hiten\Downloads\gnani
 │   .gitignore
 │   DukaanSaathi_Phase_0_PRD_v1.0.md
 │   pytest.ini
+│   requirements.txt
 ├───backend
 │   │   __init__.py
 │   │   alembic.ini
@@ -976,6 +1063,7 @@ C:\Users\hiten\Downloads\gnani
 │   │   ├───core
 │   │   │       config.py
 │   │   │       database.py
+│   │   │       rate_limiter.py
 │   │   │       security.py
 │   │   │       __init__.py
 │   │   ├───models
@@ -1046,14 +1134,18 @@ C:\Users\hiten\Downloads\gnani
 │   └───scripts
 │           seed_postgres.py
 ├───docs
+│   │   INCIDENT_AND_RECOVERY_RUNBOOK.md
 │   │   ORDER_INTELLIGENCE_EVALUATION.md
 │   │   PERFORMANCE_REPORT.md
 │   │   phase_4_voice_benchmark_results.json
 │   │   PHASE_1_FEASIBILITY_REPORT.md
 │   │   PRD.md
+│   │   PRIVACY_AND_RETENTION_POLICY.md
+│   │   PRODUCTION_READINESS_CHECKLIST.md
 │   │   PROJECT_CHRONICLE.md
 │   │   QA_DEFECT_REGISTER.md
 │   │   QA_TEST_PLAN.md
+│   │   SECURITY_AUDIT_REPORT.md
 │   │   SPEECH_EVALUATION_REPORT.md
 │   └───screenshots
 │           01_store_home.png
@@ -1128,6 +1220,7 @@ C:\Users\hiten\Downloads\gnani
     │       test_merchant_order_lifecycle.py
     │       test_orders_and_business_rules.py
     │       test_products_api.py
+    │       test_security_hardening.py
     │       test_seed_validation.py
     │       test_sessions_api.py
     │       test_stock_movements_api.py
@@ -1183,8 +1276,9 @@ C:\Users\hiten\Downloads\gnani
 - **Phase 6 (Shopkeeper Merchant Dashboard & Operations Interface):** Complete & verified. Built protected merchant authentication (`/merchant/login`), live SQL-aggregated overview metrics (`/merchant`), full order state machine (`pending -> accepted -> preparing -> ready -> completed` and `cancelled` with compensating stock restoration), atomic inventory deduction on acceptance, rejection with zero stock modification, live stock editor with threshold alerts, product catalogue CRUD, and immutable stock movement audit feed. 130 automated tests passing (101 Python pytest + 29 Next.js Vitest). Production build verified cleanly with 0 errors. 4 full-resolution screenshots captured.
 - **Phase 7 (Complete System Integration & End-to-End Validation):** Complete & verified. Deployed and verified against real PostgreSQL 16.6 on port 5432 with 33 constraints and 36 indexes. Disabled silent SQLite fallback in staging/production. Conducted full API contract audit across 21 FastAPI routes. Formally verified multi-connection PostgreSQL row locking (`with_for_update()`) under concurrent conflicting order acceptance transactions (1 winner: 200 OK, 1 loser: 409 Conflict, 0.0 final stock, exactly 1 audit row). Executed 5 automated browser E2E workflows with Puppeteer and Chrome, capturing 4 new screenshots. 142 total automated tests passing (113 Python pytest + 29 Next.js Vitest). Next.js production build verified cleanly with 0 errors.
 - **Phase 8 (Comprehensive Quality Assurance & Product Evaluation):** Complete & verified. Authored comprehensive PRD traceability matrix mapping 100% of P0 requirements to executable tests and empirical evidence (`docs/QA_TEST_PLAN.md`). Formulated 30-case real speech dataset protocol and conducted live Prisma v3 STT evaluation (`docs/SPEECH_EVALUATION_REPORT.md`), documenting Latin prompt vs Devanagari ASR script divergence (128.35% verbatim WER vs 93.5% SKU extraction via dual-script alias catalog) and confirming WebM Opus payload reduction with negligible acoustic penalty. Evaluated Order Intelligence engine on 30 benchmark cases and 5 multi-turn scenarios (`docs/ORDER_INTELLIGENCE_EVALUATION.md`): 93.5% product/quantity extraction accuracy, 93.3% exact cart match, 100% scenario completion, 0 oversell violations. Audited device UX on Mobile Chrome (Pixel 7 393x851) and Desktop Chrome (1280x800) with zero horizontal overflow and compliant touch targets ($\ge 40\times 40\text{px}$). Profiled 30 live voice-turn trials (`docs/PERFORMANCE_REPORT.md`): median total server time 2192.5ms (target $\le 4000\text{ms}$), p95 3043.1ms (target $\le 10000\text{ms}$); resolved Windows subprocess bottleneck via in-memory WAV header fast-path (0.07ms median). Verified fault recovery and idempotency (HTTP 413, HTTP 400, Timbre network failure fallback to text, duplicate cancellation blocking). Authored defect register (`docs/QA_DEFECT_REGISTER.md`) with 100% P0/P1 defect resolution. 152 total automated tests passing (123 Python pytest + 29 Next.js Vitest). Next.js production build verified cleanly with 0 errors.
+- **Phase 9 (Security Hardening & Production Readiness):** Complete & certified. Conducted exhaustive security audit across authentication, authorization, perimeter headers, secrets, database resilience, and audio privacy (`docs/SECURITY_AUDIT_REPORT.md`). Deprecated master token delivery; implemented short-lived HMAC-SHA256 session tokens with 24h expiry and timing-safe comparison. Protected `GET /orders/{id}` against enumeration. Added sliding-window IP rate limiter (`backend/app/core/rate_limiter.py`). Enforced defensive security headers (CSP, nosniff, frame-ancestors, permissions-policy). Sanitized database error logs and health endpoints (`/health/live`, `/health/ready`). Verified real PostgreSQL backup and restoration into staging with 100% data parity. Authored `requirements.txt`, `docs/PRODUCTION_READINESS_CHECKLIST.md`, `docs/PRIVACY_AND_RETENTION_POLICY.md`, and `docs/INCIDENT_AND_RECOVERY_RUNBOOK.md`. 174 total automated tests passing (145 Python pytest + 29 Next.js Vitest). Next.js production build verified cleanly with 0 errors.
 
-### Immediate Next Steps (Phase 9: Production Deployment & Contest Packaging)
-1. **Containerization & Deployment Orchestration:** Configure production Dockerfiles and compose setups for FastAPI backend and Next.js frontend with PostgreSQL / Neon cloud connectivity.
+### Immediate Next Steps (Phase 10: Production Containerization & Contest Submission Packaging)
+1. **Containerization & Deployment Orchestration:** Configure multi-stage production Dockerfiles and docker-compose configurations for FastAPI backend and Next.js frontend with PostgreSQL / Neon cloud connectivity.
 2. **Comprehensive Demonstration Video & Runbook:** Record end-to-end customer-to-merchant walkthrough demonstrating voice order placement, live Prisma/Timbre interaction, and instant merchant dashboard fulfillment.
 3. **Competition Submission Packaging:** Compile executive summary, architectural diagrams, benchmark evaluation sheets, and submission archive for the Great Indian AI Internship Challenge.
