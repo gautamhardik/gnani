@@ -36,6 +36,12 @@ out/
 dist/
 .cache/
 
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+!data/database/dukkaansaathi_seed.sqlite
+
 # Testing & Logs
 .pytest_cache/
 .coverage

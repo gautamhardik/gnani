@@ -134,6 +134,75 @@ Third-party voice APIs represent the highest external risk factor in DukaanSaath
 - **Timbre TTS:** Live API 200 OK, latency < 900ms, valid 16kHz WAV generation.
 - **Phase 1 Completion Gate:** Fully passed.
 
+### Phase 2: Product Architecture & Data Foundation
+**Date:** 2026-10-30  
+**Status:** Completed & Verified (17/17 Tests Passing)
+
+#### 1. Request & Context
+Implement Phase 2 of the DukaanSaathi roadmap:
+- FastAPI backend architecture with environment-based configuration.
+- Database connectivity supporting PostgreSQL (production/Neon) with local SQLite fallback for development.
+- SQLAlchemy declarative models for all 9 core entities: `stores`, `products`, `product_aliases`, `inventory`, `customers`, `order_sessions`, `orders`, `order_items`, `stock_movements`.
+- Alembic database migration environment with initial migration `001_initial_schema.py`.
+- Validated starter-pack seed import script (`backend/scripts/seed_db.py`) and catalogue audit script (`backend/scripts/validate_catalogue.py`).
+- Product CRUD, search (canonical name, brand, colloquial alias), and inventory endpoints.
+- Enforce the non-negotiable business rule: customer confirmation creates a `pending` order without stock deduction; inventory is deducted only upon shopkeeper acceptance with an atomic stock recheck.
+- Full pytest test suite with 100% pass rate.
+
+#### 2. Rationale
+The data layer is the authoritative backbone of DukaanSaathi. Voice AI understands customer intent, but the backend must control stock, enforce constraints, calculate authoritative totals, and guarantee transactional safety without overselling.
+
+#### 3. Actions Performed
+- **FastAPI Core Scaffolding:**
+  - Implemented `backend/app/core/config.py` with Pydantic v2 `BaseSettings`, `.env` integration, and flexible CORS origin parsing.
+  - Implemented `backend/app/core/database.py` with SQLAlchemy engine pooling, connection validation, and seamless fallback between PostgreSQL and SQLite.
+  - Implemented `backend/app/core/security.py` protecting merchant administrative operations with Bearer tokens.
+- **SQLAlchemy Domain Models (`backend/app/models/`):**
+  - `Store`: Tenant store profile, unique slug, currency, timezone.
+  - `Product`: SKU unique per store, non-negative price constraint, positive pack size, active toggle.
+  - `ProductAlias`: Indexed normalized alias for fast phonetic lookups, cascade deletion on product drop.
+  - `StoreInventory`: Non-negative stock and reserved constraints, low-stock threshold.
+  - `Customer`: Customer identity and order session tracking.
+  - `OrderSession`: Active/confirmed/expired state machine, jsonb draft cart.
+  - `Order`: Pending/accepted/preparing/ready/completed/rejected/cancelled status machine, total amount constraint, rejection reason.
+  - `OrderItem`: Snapshotted name, sale unit, unit price, and subtotal.
+  - `StockMovement`: Authoritative ledger of every stock modification (`change_quantity`, `reason`).
+- **Alembic Migrations:**
+  - Created `backend/alembic.ini`, `backend/alembic/env.py`, `backend/alembic/script.py.mako`.
+  - Authored `backend/alembic/versions/001_initial_schema.py` covering all 9 tables, foreign keys, indexes, and check constraints.
+- **Data Validation & Seeding (`backend/scripts/`):**
+  - Implemented `seed_db.py`: Pre-flight validates all 100 products, 306 aliases, and 100 inventory records before write; idempotently upserts records.
+  - Implemented `validate_catalogue.py`: Audits database constraints, inventory foreign keys, and low-stock indicators.
+- **REST API Endpoints (`backend/app/api/v1/`):**
+  - `GET /api/v1/products`: Paginated product catalogue with category and active filters.
+  - `GET /api/v1/products/search`: Multi-strategy search across canonical names, brands, and colloquial aliases with match source attribution.
+  - `GET /api/v1/products/{id}`: Product detail with inventory and alias resolution.
+  - `POST /api/v1/products`: Merchant-protected product creation with initial stock and aliases.
+  - `PUT /api/v1/products/{id}`: Merchant-protected product attribute and price updates.
+  - `DELETE /api/v1/products/{id}`: Soft-deactivation.
+  - `GET /api/v1/inventory`: Inventory dashboard with low-stock/out-of-stock filtering.
+  - `PUT /api/v1/inventory/{id}`: Merchant-protected stock adjustment with automatic `StockMovement` logging.
+  - `POST /api/v1/orders`: Customer confirmation endpoint creating `pending` orders with snapshotted prices; verifies zero stock deduction.
+  - `GET /api/v1/orders`: Merchant order feed with status filtering.
+  - `POST /api/v1/orders/{id}/accept`: Merchant acceptance endpoint performing atomic stock recheck, decrementing inventory, and logging `StockMovement`.
+  - `POST /api/v1/orders/{id}/reject`: Merchant rejection endpoint recording reason without touching inventory.
+- **Pytest Suite (`tests/backend/`):**
+  - Configured `tests/backend/conftest.py` with in-memory SQLite and `StaticPool` for test isolation.
+  - Authored 17 comprehensive unit and integration tests across models, product APIs, inventory management, order lifecycle, atomic rollbacks, and seed validation.
+
+#### 4. Issues Encountered & Fixes Applied
+1. **CORS List Parsing in Pydantic Settings:** `ALLOWED_ORIGINS` in `.env` was a plain string; added a robust `@field_validator` in `config.py` supporting comma-separated strings, JSON arrays, and single URLs.
+2. **PostgreSQL Localhost Daemon Unreachable:** When local PostgreSQL daemon is not active on port 5432, `database.py` catches `OperationalError` gracefully, logs a clear warning, and routes to local SQLite (`dukkaansaathi_dev.sqlite`) for development without blocking execution.
+3. **SQLite In-Memory Test Isolation:** Default SQLite in-memory connections are connection-isolated, causing tables created in test setup to disappear in subsequent sessions. Configured SQLAlchemy `StaticPool` in `conftest.py`, ensuring all test transactions share the same in-memory schema.
+4. **Starter Pack Verification Assertions:** `PRD001` in the synthetic starter pack is `"Loose Wheat Flour (Atta)"` rather than Aashirvaad (which is `PRD002`). Updated test assertion to verify `Atta` on `PRD001` and `Aashirvaad` on `PRD002`.
+5. **Transient Test Artifacts Hygiene:** Added `*.sqlite`, `*.sqlite3`, and `*.db` to `.gitignore` (excluding `data/database/dukkaansaathi_seed.sqlite`), adhering strictly to the clean workspace mandate.
+
+#### 5. Verification Results
+- **Pytest Execution:** 17 tests executed, 17 passed, 0 failed, 0 skipped, 0 warnings (Execution time: 0.70s).
+- **Catalogue Audit:** Verified 1 store, 100 products, 306 aliases, 100 inventory records, 0 negative stock/price violations.
+- **Critical Business Rule Test:** Explicitly verified that `POST /api/v1/orders` creates orders in `pending` status without deducting inventory, and `POST /api/v1/orders/{id}/accept` atomically validates and decrements stock.
+- **Phase 2 Completion Gate:** Fully passed.
+
 ---
 
 ## 5. Current Repository & Asset Inventory
@@ -144,6 +213,50 @@ C:\Users\hiten\Downloads\gnani
 │   .env.example
 │   .gitignore
 │   DukaanSaathi_Phase_0_PRD_v1.0.md
+│   pytest.ini
+├───backend
+│   │   __init__.py
+│   │   alembic.ini
+│   ├───alembic
+│   │   │   env.py
+│   │   │   script.py.mako
+│   │   └───versions
+│   │           001_initial_schema.py
+│   ├───app
+│   │   │   __init__.py
+│   │   │   main.py
+│   │   ├───api
+│   │   │   │   deps.py
+│   │   │   │   __init__.py
+│   │   │   └───v1
+│   │   │           inventory.py
+│   │   │           orders.py
+│   │   │           products.py
+│   │   │           router.py
+│   │   │           __init__.py
+│   │   ├───core
+│   │   │       config.py
+│   │   │       database.py
+│   │   │       security.py
+│   │   │       __init__.py
+│   │   ├───models
+│   │   │       base.py
+│   │   │       customer.py
+│   │   │       inventory.py
+│   │   │       order.py
+│   │   │       product.py
+│   │   │       stock_movement.py
+│   │   │       store.py
+│   │   │       __init__.py
+│   │   └───schemas
+│   │           common.py
+│   │           inventory.py
+│   │           order.py
+│   │           product.py
+│   │           __init__.py
+│   └───scripts
+│           seed_db.py
+│           validate_catalogue.py
 ├───data
 │   │   PACK_CONTENTS.json
 │   │   README.md
@@ -175,9 +288,14 @@ C:\Users\hiten\Downloads\gnani
 │       PRD.md
 │       PROJECT_CHRONICLE.md
 └───tests
+    ├───backend
+    │       conftest.py
+    │       test_database_models.py
+    │       test_inventory_api.py
+    │       test_orders_and_business_rules.py
+    │       test_products_api.py
+    │       test_seed_validation.py
     └───gnani
-            output_timbre.wav
-            prisma_live_result.json
             test_prisma.py
             test_timbre.py
 ```
@@ -187,12 +305,13 @@ C:\Users\hiten\Downloads\gnani
 ## 6. Current State & Immediate Next Steps
 
 ### Current State
-- **Phase 0 (Requirements):** Complete and frozen.
-- **Phase 1 (Gnani Feasibility):** Complete and verified on live endpoints.
-- **Voice Pipeline Performance:** Both Prisma and Timbre respond in < 1 second.
+- **Phase 0 (Requirements & PRD):** Complete & frozen.
+- **Phase 1 (Gnani Prisma & Timbre Feasibility):** Complete & validated on live endpoints.
+- **Phase 2 (Product Architecture & Data Foundation):** Complete & verified with 17 passing automated tests. All 100 products, 306 aliases, and inventory records loaded with full constraint verification.
 
-### Immediate Next Steps (Phase 2: Product Architecture & Data Foundation)
-1. **Database Setup:** Initialize PostgreSQL schema using `data/database/schema_postgres.sql`.
-2. **Data Seeding:** Run catalogue load scripts for the 100 products, 306 aliases, and inventory records for *Sharma General Store* (`STORE001`).
-3. **Backend Foundation:** Initialize FastAPI backend project structure with SQLAlchemy models and database connection pools.
-4. **Catalogue Query APIs:** Implement initial SKU resolution and inventory lookup endpoints.
+### Immediate Next Steps (Phase 3: Core Order Intelligence Engine)
+1. **Transcript Normalization Service:** Build phonetic mapping for colloquial Hinglish terms (*aata* $\rightarrow$ *atta*, *cheeni* $\rightarrow$ *sugar*, *doodh* $\rightarrow$ *milk*).
+2. **Multi-Strategy Product Matcher:** Implement exact, alias, and fuzzy candidate resolution with RapidFuzz.
+3. **Quantity & Packaging Parser:** Extract metric and colloquial quantities (*aadha kilo*, *pao bhar*, *do packet*) with packaging integrity checks.
+4. **Conversational State Machine:** Implement dialogue state transitions (`COLLECTING`, `NEEDS_CLARIFICATION`, `AWAITING_CONFIRMATION`, `ORDER_PLACED`).
+5. **Multi-turn Order Corrections:** Support conversational additions, removals, and quantity overrides against the authoritative database.
