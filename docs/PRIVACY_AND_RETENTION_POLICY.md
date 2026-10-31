@@ -75,3 +75,4 @@ To ensure complete transparency and informed consent for kirana shoppers, the fo
 1. **Merchant-Initiated Deletion:** Kirana merchants can delete customer order sessions, telephone identifiers, or product movement records via administrative requests.
 2. **Automated Session Purge:** Inactive customer sessions older than 7 days are scheduled for periodic truncation by the database garbage collector.
 3. **Incident Reporting:** In the event of an inadvertent audio file leak or uncleaned temporary directory, operations follows the remediation procedure outlined in [`docs/INCIDENT_AND_RECOVERY_RUNBOOK.md`](file:///c:/Users/hiten/Downloads/gnani/docs/INCIDENT_AND_RECOVERY_RUNBOOK.md).
+

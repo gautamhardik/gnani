@@ -1,0 +1,58 @@
+# ==============================================================================
+# DukaanSaathi — Render Blueprint Specification (Infrastructure-as-Code)
+# Production backend web service deployed via Docker container
+# Single instance required due to in-memory SlidingWindowRateLimiter
+# ==============================================================================
+
+services:
+  - type: web
+    name: dukaansaathi-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    region: singapore
+    numInstances: 1
+    healthCheckPath: /health/ready
+    autoDeploy: true
+
+    envVars:
+      - key: APP_NAME
+        value: "DukaanSaathi API"
+      - key: APP_ENV
+        value: "production"
+      - key: DEBUG
+        value: "false"
+      - key: HOST
+        value: "0.0.0.0"
+      - key: PORT
+        value: "8000"
+      - key: DEMO_STORE_ID
+        value: "STORE001"
+      - key: ENABLE_HSTS
+        value: "true"
+      - key: SESSION_EXPIRE_SECONDS
+        value: "86400"
+      # Neon / Managed PostgreSQL Connection String (requires sslmode=require)
+      - key: DATABASE_URL
+        sync: false
+      # Cryptographic HMAC signing secret (64 hex characters recommended)
+      - key: SECRET_KEY
+        generateValue: true
+      # Merchant authentication token for operations
+      - key: SHOPKEEPER_AUTH_TOKEN
+        sync: false
+      - key: MERCHANT_USERNAME
+        value: "sharma"
+      # Merchant operations dashboard password
+      - key: MERCHANT_PASSWORD
+        sync: false
+      # CORS Allowed Origins (Comma-separated Vercel production domains)
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # Live Gnani AI STT/TTS Credentials
+      - key: GNANI_API_KEY
+        sync: false
+      - key: GNANI_PRISMA_ENDPOINT
+        value: "https://api.vachana.ai/stt/v3"
+      - key: GNANI_TIMBRE_ENDPOINT
+        value: "https://api.vachana.ai/api/v1/tts/inference"

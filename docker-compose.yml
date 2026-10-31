@@ -1,0 +1,74 @@
+version: '3.8'
+
+# ==============================================================================
+# DukaanSaathi — Local Development & Staging Compose Stack
+# Multi-container environment: FastAPI backend + PostgreSQL 16
+# Includes persistent volumes, healthchecks, and dependency sequencing
+# ==============================================================================
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: dukaansaathi-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-dukaansaathi_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-dukaansaathi_dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - dukaansaathi-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dukaansaathi-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_NAME: "DukaanSaathi API"
+      APP_ENV: ${APP_ENV:-development}
+      DEBUG: ${DEBUG:-true}
+      HOST: "0.0.0.0"
+      PORT: "8000"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-dukaansaathi_dev}
+      SECRET_KEY: ${SECRET_KEY:-dukaansaathi-production-signing-secret-key-2026}
+      SHOPKEEPER_AUTH_TOKEN: ${SHOPKEEPER_AUTH_TOKEN:-demo-shopkeeper-secret-key-sharma-store}
+      MERCHANT_USERNAME: ${MERCHANT_USERNAME:-sharma}
+      MERCHANT_PASSWORD: ${MERCHANT_PASSWORD:-kirana@2026}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      GNANI_API_KEY: ${GNANI_API_KEY:-}
+      GNANI_PRISMA_ENDPOINT: "https://api.vachana.ai/stt/v3"
+      GNANI_TIMBRE_ENDPOINT: "https://api.vachana.ai/api/v1/tts/inference"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - dukaansaathi-net
+
+volumes:
+  pgdata:
+    name: dukaansaathi-pgdata
+    driver: local
+
+networks:
+  dukaansaathi-net:
+    name: dukaansaathi-network
+    driver: bridge

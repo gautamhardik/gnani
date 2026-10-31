@@ -1,0 +1,59 @@
+# DukaanSaathi .dockerignore
+# Excludes local developer environments, temporary files, secrets, frontend, and tests
+
+# Environment secrets and credentials (CRITICAL)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+
+# Git metadata
+.git/
+.gitignore
+
+# Python caches and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Local databases and SQLite files
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+
+# Audio test outputs and recordings
+data/audio/*.wav
+data/audio/*.mp3
+data/audio/*.webm
+data/audio/*.ogg
+
+# Frontend (hosted independently on Vercel)
+frontend/
+node_modules/
+
+# Test suites and development mocks (unnecessary in production runtime)
+tests/
+
+# Documentation and drafts
+docs/
+*.md
+!README.md
+
+# OS and Editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

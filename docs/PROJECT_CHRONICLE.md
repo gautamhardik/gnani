@@ -140,7 +140,23 @@ Every architectural decision and engineering implementation in DukaanSaathi adhe
   7. Ephemeral Audio Governance: Formalize zero permanent audio storage policy. Transcoded temporary files are strictly removed via `finally` blocks, and synthesized audio clips are cached in volatile RAM for a maximum TTL of 60 minutes with LRU eviction.
   8. Verified Disaster Recovery: Test and verify complete PostgreSQL backup (`pg_dump`) and restoration (`pg_restore`) into an isolated staging database (`dukaansaathi_staging_verify`), proving 100% data parity across 100 products, 100 inventory rows, and 306 aliases.
   9. Pinned Dependency Lockfile: Author `requirements.txt` with exact pinned versions. Verify clean audit status via `pip-audit`.
-- **Consequence:** DukaanSaathi is hardened against OWASP Top 10 vulnerabilities, eliminates credential leakage, protects customer privacy, and is certified production-ready.
+### ADR-011: Containerization, Render/Vercel Deployment Topology, Single-Instance Rate Limiting & Fail-Fast Startup Validation
+- **Status:** Accepted (2026-10-31)
+- **Context:** Following the security hardening and readiness certification in Phase 9, DukaanSaathi required a reproducible, portable containerization and production deployment configuration. Key technical considerations included:
+  1. Heterogeneous Deployment Target: Next.js frontend is optimal for global CDN edge rendering and static asset distribution on Vercel, whereas the FastAPI Python backend requires system libraries (FFmpeg, libpq5) best suited for a Debian-slim container on Render.
+  2. Single-Instance Process Rate Limiter: The in-memory `SlidingWindowRateLimiter` (`backend/app/core/rate_limiter.py`) relies on local Python process state. Scaling to multiple container instances without an external distributed cache (such as Redis) would cause uncoordinated rate limits.
+  3. Production Environment Validation: Default development configurations (local SQLite database, placeholder signing secrets, demo tokens) could inadvertently be deployed to production, violating data integrity and security guarantees.
+  4. Dependency Vulnerability Closeout: Python dependencies and frontend packages required an empirical vulnerability audit (`pip-audit`, `npm audit`), remediation of patchable CVEs, and formal documentation of accepted operational risks.
+- **Decision:**
+  1. Multi-Stage Production Dockerfile: Author `Dockerfile` using `python:3.11-slim`, system packages (`ffmpeg`, `libpq5`, `curl`, `ca-certificates`), unprivileged non-root user `appuser` (UID 10001), layer caching for requirements, safe readiness healthcheck (`curl -f http://localhost:8000/health/ready`), and 1-worker Uvicorn ASGI launch command.
+  2. Container Exclusion Manifest: Author strict `.dockerignore` excluding `.env*`, `tests/`, `frontend/`, local databases (`*.sqlite`), caches, and temporary audio artifacts.
+  3. Local & Staging Orchestration: Author `docker-compose.yml` defining the complete stack: FastAPI backend and PostgreSQL 16 Alpine with persistent named volume `pgdata`, database health check dependency (`pg_isready`), and bridge networking.
+  4. Render Blueprint Specification: Author `render.yaml` declaring the backend web service with Docker runtime, Singapore region, and strictly enforcing `numInstances: 1` to maintain single-instance in-memory rate limiting invariants until Redis is introduced.
+  5. Vercel Frontend Configuration: Author `frontend/vercel.json` with Next.js App Router framework configuration, security headers (`nosniff`, `DENY`), and explicit `Permissions-Policy: microphone=(self)` to permit Web Audio API recording on the origin while blocking unauthorized third-party embeds. Update `frontend/.env.example` with public client-safe variables only (`NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_STORE_ID`).
+  6. Fail-Fast Production Startup Validation: Extend `backend/app/core/config.py` with `@model_validator(mode="after")` enforcing that whenever `APP_ENV in ("staging", "production")`, the engine raises fatal `ValueError` if `DATABASE_URL` is not PostgreSQL (`postgresql://`), `SECRET_KEY` is default or <32 characters, `SHOPKEEPER_AUTH_TOKEN` is default or <16 characters, or `GNANI_API_KEY` is missing or set to placeholder values. Add `tests/backend/test_production_config_validation.py` verifying this behavior.
+  7. Dependency Vulnerability Remediation: Upgrade `pydantic-settings` from 2.12.0 to 2.16.2 (resolving CVE-2026-58203) and `python-multipart` from 0.0.22 to 0.0.32 (resolving PYSEC-2026-3036 through 3040). Document accepted operational risks for dev-only `pytest 8.4.2` and Next.js 14 server action advisories (no server actions implemented; Next.js 16 represents a prohibited breaking upgrade).
+  8. Test Count Reconciliation: Clarify the historical double-counting of 21 security tests in Phase 9 reporting ($56 \text{ backend} + 21 \text{ security} = 77$, but `test_security_hardening.py` was inside `tests/backend/`), establishing the authoritative regression count as 179 passing tests (150 Python + 29 Vitest).
+- **Consequence:** DukaanSaathi is fully containerized, deployment-ready on Render + Vercel, guarded against invalid production configurations, and certified at release candidate `v1.0.0-rc1`.
 
 ---
 
@@ -1022,17 +1038,96 @@ Moving from functional validation to production operations requires eliminating 
 - **Disaster Recovery Staging Test:** 100% data parity verified (100 products, 100 inventory, 306 aliases).
 - **Phase 9 Completion Gate:** Fully passed. Certified production-ready.
 
+### Phase 10: Containerization, Deployment & Production Release Candidate
+**Date:** 2026-10-31  
+**Status:** Completed & Certified (`v1.0.0-rc1`)  
+**Git Branch:** `master`
+
+#### 1. Request & Context
+Execute Phase 10 of DukaanSaathi: Containerization, Deployment, and Production Release Candidate. Deliver production-grade Docker containerization for the FastAPI backend, local multi-service orchestration with PostgreSQL 16 via Docker Compose, infrastructure-as-code deployment specifications for Render (backend) and Vercel (frontend), fail-fast startup validation for staging/production secrets, empirical vulnerability closeout (`pip-audit`, `npm audit`), full test suite reconciliation, and comprehensive project documentation (`README.md`, `RELEASE_MANIFEST.md`). Zero feature expansion.
+
+#### 2. Rationale & Architecture
+To achieve seamless, repeatable production deployment without environmental divergence:
+1. The backend application requires Debian-level binaries (FFmpeg for audio ingestion and transcoding, libpq5 for PostgreSQL wire protocol) and should run under a hardened, unprivileged Linux container user.
+2. The frontend is decoupled on Vercel Edge for instant worldwide CDN distribution, precluding unnecessary container overhead.
+3. Production environment integrity requires failing fast on boot if insecure default secrets or SQLite connection strings are detected.
+4. Rate limiting invariants must be documented and enforced: the in-memory sliding window limiter necessitates a single container instance until Redis is provisioned.
+
+#### 3. Key Actions & Remediations
+- **Production Backend Dockerfile (`Dockerfile`):**
+  - Multi-stage minimal footprint based on `python:3.11-slim`.
+  - Installed system dependencies: `ffmpeg`, `libpq5`, `curl`, and `ca-certificates`.
+  - Created unprivileged user `appuser:appgroup` (UID/GID 10001) adhering to least-privilege security.
+  - Implemented container healthcheck using `/health/ready` probe (`curl -f http://localhost:8000/health/ready`).
+  - Standardized entrypoint: `uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips "*"`.
+- **Container Exclusion Manifest (`.dockerignore`):**
+  - Excluded all sensitive credentials (`.env*`), Git metadata, Python bytecode, virtual environments, local SQLite databases (`*.sqlite`), frontend code, test suites, and temporary audio recordings.
+- **Local & Staging Compose Stack (`docker-compose.yml`):**
+  - Multi-service stack linking `backend` and `db` (`postgres:16-alpine`).
+  - Configured health-based startup dependency (`condition: service_healthy` via `pg_isready`).
+  - Added named persistent volume `pgdata` for PostgreSQL data durability across restarts.
+  - Zero hardcoded secrets: all credentials interpolated from environment with safe local defaults.
+- **Render Backend Blueprint (`render.yaml`):**
+  - Infrastructure-as-code specification for Render Web Service in Singapore region.
+  - Enforced `numInstances: 1` to maintain single-instance rate limiter validity.
+  - Configured `/health/ready` healthcheck probe and automatic secret injection.
+- **Vercel Frontend Configuration (`frontend/vercel.json`):**
+  - Next.js framework build configuration with hardened HTTP security headers (`nosniff`, `DENY`, `strict-origin-when-cross-origin`).
+  - Configured `Permissions-Policy: microphone=(self), camera=(), geolocation=()` to explicitly permit Web Audio API recording on origin while blocking iframe interception.
+  - Sanitized `frontend/.env.example` to expose only client-safe variables (`NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_STORE_ID`).
+- **Fail-Fast Production Startup Validation (`backend/app/core/config.py`):**
+  - Added `@model_validator(mode="after")` `validate_production_environment()`.
+  - When `APP_ENV in ("staging", "production")`, fails fast with fatal `ValueError` if `DATABASE_URL` is not PostgreSQL, or if `SECRET_KEY`, `SHOPKEEPER_AUTH_TOKEN`, or `GNANI_API_KEY` are missing or default.
+  - Authored 4 automated tests in `tests/backend/test_production_config_validation.py` verifying both rejection of insecure settings and acceptance of valid credentials.
+- **Empirical Dependency Audit & Vulnerability Remediation:**
+  - Ran `pip-audit 2.10.1`: upgraded `pydantic-settings` to 2.16.2 (fixing CVE-2026-58203) and `python-multipart` to 0.0.32 (fixing PYSEC-2026-3036..3040). Documented test-runner risk acceptance for `pytest 8.4.2` (excluded from production Docker container).
+  - Ran `npm audit`: documented risk acceptance for Next.js 14.2.15 server action advisories (0 server actions used; Next.js 16 represents prohibited breaking upgrade).
+- **Test Arithmetic Reconciliation:**
+  - Formally reconciled Phase 9 reported count (195) vs unique test node IDs (174) due to double-counting of `test_security_hardening.py` (21 tests).
+  - Established current authoritative count: 179 unique tests (150 Python + 29 Vitest), 100% passing.
+- **Authoritative Release Manifest & Documentation:**
+  - Authored `docs/RELEASE_MANIFEST.md` with complete build metadata, component versions, and deployment specifications.
+  - Authored comprehensive root `README.md` with architecture diagrams, voice sequence flows, local & Docker quickstart, API overview, and synthetic catalogue disclosure.
+
+#### 4. Files Created / Modified
+- `Dockerfile` (Created: Debian-slim Python 3.11 with FFmpeg, non-root user, readiness healthcheck)
+- `.dockerignore` (Created: strict container build exclusion manifest)
+- `docker-compose.yml` (Created: local development & staging stack with PostgreSQL 16)
+- `render.yaml` (Created: Render Blueprint specification for single-instance web service)
+- `frontend/vercel.json` (Created: Vercel deployment headers and microphone permission policy)
+- `frontend/.env.example` (Modified: added NEXT_PUBLIC_STORE_ID and public variable guidance)
+- `backend/app/core/config.py` (Modified: fail-fast startup validator for staging/production secrets)
+- `requirements.txt` (Modified: bumped pydantic-settings to 2.16.2 and python-multipart to 0.0.32)
+- `tests/backend/test_production_config_validation.py` (Created: 4 tests for config validation)
+- `docs/RELEASE_MANIFEST.md` (Created: production release candidate manifest v1.0.0-rc1)
+- `README.md` (Created: comprehensive root documentation and architecture guide)
+- `docs/PROJECT_CHRONICLE.md` (Updated: ADR-011, Phase 10 log, asset inventory, current state, next steps)
+
+#### 5. Verification Results
+- **Production Config Validation Tests:** 4/4 passed in 0.80s (`test_production_config_validation.py`).
+- **Python Pytest Suite:** 150/150 passed in 9.95s across backend, intelligence, voice, and integration.
+- **Frontend Vitest Suite:** 29/29 passed in 7.43s across 6 test files.
+- **Next.js Production Build:** `npm run build` compiled 7 static routes cleanly with zero errors.
+- **Total Automated Test Suite:** **179/179 passed** (100% passing rate).
+- **Dependency Audit Status:** 0 runtime Python vulnerabilities; 0 runtime frontend Server Action risk.
+- **Phase 10 Completion Gate:** Fully passed. Certified Release Candidate `v1.0.0-rc1`.
+
 ---
 
 ## 5. Current Repository & Asset Inventory
 
 ```
 C:\Users\hiten\Downloads\gnani
+│   .dockerignore
 │   .env (ignored)
 │   .env.example
 │   .gitignore
+│   docker-compose.yml
+│   Dockerfile
 │   DukaanSaathi_Phase_0_PRD_v1.0.md
 │   pytest.ini
+│   README.md
+│   render.yaml
 │   requirements.txt
 ├───backend
 │   │   __init__.py
@@ -1145,6 +1240,7 @@ C:\Users\hiten\Downloads\gnani
 │   │   PROJECT_CHRONICLE.md
 │   │   QA_DEFECT_REGISTER.md
 │   │   QA_TEST_PLAN.md
+│   │   RELEASE_MANIFEST.md
 │   │   SECURITY_AUDIT_REPORT.md
 │   │   SPEECH_EVALUATION_REPORT.md
 │   └───screenshots
@@ -1168,6 +1264,7 @@ C:\Users\hiten\Downloads\gnani
 │   │   postcss.config.mjs
 │   │   tailwind.config.ts
 │   │   tsconfig.json
+│   │   vercel.json
 │   │   vitest.config.ts
 │   │   test-setup.ts
 │   ├───app
@@ -1219,6 +1316,7 @@ C:\Users\hiten\Downloads\gnani
     │       test_merchant_auth_api.py
     │       test_merchant_order_lifecycle.py
     │       test_orders_and_business_rules.py
+    │       test_production_config_validation.py
     │       test_products_api.py
     │       test_security_hardening.py
     │       test_seed_validation.py
@@ -1277,8 +1375,9 @@ C:\Users\hiten\Downloads\gnani
 - **Phase 7 (Complete System Integration & End-to-End Validation):** Complete & verified. Deployed and verified against real PostgreSQL 16.6 on port 5432 with 33 constraints and 36 indexes. Disabled silent SQLite fallback in staging/production. Conducted full API contract audit across 21 FastAPI routes. Formally verified multi-connection PostgreSQL row locking (`with_for_update()`) under concurrent conflicting order acceptance transactions (1 winner: 200 OK, 1 loser: 409 Conflict, 0.0 final stock, exactly 1 audit row). Executed 5 automated browser E2E workflows with Puppeteer and Chrome, capturing 4 new screenshots. 142 total automated tests passing (113 Python pytest + 29 Next.js Vitest). Next.js production build verified cleanly with 0 errors.
 - **Phase 8 (Comprehensive Quality Assurance & Product Evaluation):** Complete & verified. Authored comprehensive PRD traceability matrix mapping 100% of P0 requirements to executable tests and empirical evidence (`docs/QA_TEST_PLAN.md`). Formulated 30-case real speech dataset protocol and conducted live Prisma v3 STT evaluation (`docs/SPEECH_EVALUATION_REPORT.md`), documenting Latin prompt vs Devanagari ASR script divergence (128.35% verbatim WER vs 93.5% SKU extraction via dual-script alias catalog) and confirming WebM Opus payload reduction with negligible acoustic penalty. Evaluated Order Intelligence engine on 30 benchmark cases and 5 multi-turn scenarios (`docs/ORDER_INTELLIGENCE_EVALUATION.md`): 93.5% product/quantity extraction accuracy, 93.3% exact cart match, 100% scenario completion, 0 oversell violations. Audited device UX on Mobile Chrome (Pixel 7 393x851) and Desktop Chrome (1280x800) with zero horizontal overflow and compliant touch targets ($\ge 40\times 40\text{px}$). Profiled 30 live voice-turn trials (`docs/PERFORMANCE_REPORT.md`): median total server time 2192.5ms (target $\le 4000\text{ms}$), p95 3043.1ms (target $\le 10000\text{ms}$); resolved Windows subprocess bottleneck via in-memory WAV header fast-path (0.07ms median). Verified fault recovery and idempotency (HTTP 413, HTTP 400, Timbre network failure fallback to text, duplicate cancellation blocking). Authored defect register (`docs/QA_DEFECT_REGISTER.md`) with 100% P0/P1 defect resolution. 152 total automated tests passing (123 Python pytest + 29 Next.js Vitest). Next.js production build verified cleanly with 0 errors.
 - **Phase 9 (Security Hardening & Production Readiness):** Complete & certified. Conducted exhaustive security audit across authentication, authorization, perimeter headers, secrets, database resilience, and audio privacy (`docs/SECURITY_AUDIT_REPORT.md`). Deprecated master token delivery; implemented short-lived HMAC-SHA256 session tokens with 24h expiry and timing-safe comparison. Protected `GET /orders/{id}` against enumeration. Added sliding-window IP rate limiter (`backend/app/core/rate_limiter.py`). Enforced defensive security headers (CSP, nosniff, frame-ancestors, permissions-policy). Sanitized database error logs and health endpoints (`/health/live`, `/health/ready`). Verified real PostgreSQL backup and restoration into staging with 100% data parity. Authored `requirements.txt`, `docs/PRODUCTION_READINESS_CHECKLIST.md`, `docs/PRIVACY_AND_RETENTION_POLICY.md`, and `docs/INCIDENT_AND_RECOVERY_RUNBOOK.md`. 174 total automated tests passing (145 Python pytest + 29 Next.js Vitest). Next.js production build verified cleanly with 0 errors.
+- **Phase 10 (Containerization, Deployment & Production Release Candidate):** Complete & certified (`v1.0.0-rc1`). Delivered Debian-slim Python 3.11 Docker container with FFmpeg, libpq5, unprivileged user, and safe readiness health checks (`Dockerfile`, `.dockerignore`). Implemented multi-service local/staging stack with PostgreSQL 16 Alpine, healthcheck sequencing, and persistent named volume (`docker-compose.yml`). Authored Render infrastructure-as-code Blueprint (`render.yaml`) enforcing single-instance constraint for in-memory rate limiter. Authored Vercel deployment configuration (`frontend/vercel.json`) with strict security headers and `Permissions-Policy: microphone=(self)`. Implemented fail-fast startup validator for staging/production credentials in `backend/app/core/config.py`. Remediated Python dependencies (`pydantic-settings 2.16.2`, `python-multipart 0.0.32`). Reconciled test counting arithmetic and verified 100% pass rate across **179 automated tests** (150 Python + 29 Vitest). Authored root `README.md` and `docs/RELEASE_MANIFEST.md`.
 
-### Immediate Next Steps (Phase 10: Production Containerization & Contest Submission Packaging)
-1. **Containerization & Deployment Orchestration:** Configure multi-stage production Dockerfiles and docker-compose configurations for FastAPI backend and Next.js frontend with PostgreSQL / Neon cloud connectivity.
-2. **Comprehensive Demonstration Video & Runbook:** Record end-to-end customer-to-merchant walkthrough demonstrating voice order placement, live Prisma/Timbre interaction, and instant merchant dashboard fulfillment.
-3. **Competition Submission Packaging:** Compile executive summary, architectural diagrams, benchmark evaluation sheets, and submission archive for the Great Indian AI Internship Challenge.
+### Immediate Next Steps (Phase 11: End-to-End Video Demonstration & Submission Archive)
+1. **Live Video Demonstration Recording:** Record a 3-to-5 minute video showcasing the end-to-end user journey: mobile customer voice ordering in Hindi/Hinglish, instant cart updates, two-phase order submission, and real-time shopkeeper fulfillment/inventory management in the merchant operations dashboard.
+2. **Competition Presentation & Slide Deck:** Prepare executive slide deck summarizing technical innovation, architecture, Gnani AI integration metrics, and competitive differentiation.
+3. **Contest Submission Archive Packaging:** Assemble submission deliverables, repository tags, and final submission archive for the Great Indian AI Internship Challenge.

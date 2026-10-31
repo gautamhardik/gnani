@@ -133,3 +133,4 @@ Before closing any incident:
 - [ ] `POST /api/v1/orders` creates pending order with 0 stock deduction
 - [ ] `POST /api/v1/orders/{id}/accept` verifies atomic stock decrement
 - [ ] Logs show zero unmasked credentials or stack traces
+
