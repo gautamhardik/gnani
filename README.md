@@ -4,7 +4,7 @@
 [![Release Version](https://img.shields.io/badge/release-v1.0.0--rc1-blue.svg)](file:///c:/Users/hiten/Downloads/gnani/docs/RELEASE_MANIFEST.md)
 [![Python](https://img.shields.io/badge/python-3.11%2B-green.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.136.3-teal.svg)](https://fastapi.tiangolo.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-14.2.15-black.svg)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15.5.28-black.svg)](https://nextjs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/status-production--ready-brightgreen.svg)]()
 
@@ -22,7 +22,7 @@ flowchart TD
     end
 
     subgraph CDN_Edge [Vercel Global Edge]
-        NextServer["Next.js 14 App Router<br/>(React 18, Tailwind CSS, Lucide Icons)<br/>Permissions-Policy: microphone=(self)"]
+        NextServer["Next.js 15 App Router<br/>(React 18, Tailwind CSS, Lucide Icons)<br/>Permissions-Policy: microphone=(self)"]
     end
 
     subgraph Backend_Cloud [Render PaaS - Singapore]
@@ -264,3 +264,4 @@ The product catalogue (`data/starter_pack_100.json`) contains **100 synthetic ev
 - **Backend:** Render Web Service via Docker (`render.yaml`), Singapore region, Single Instance (`numInstances: 1`).
 - **Frontend:** Vercel Global Edge (`frontend/vercel.json`), Next.js App Router, strict CSP and Permissions-Policy.
 - **Database:** Neon Serverless PostgreSQL 16 with automatic daily backups and Point-In-Time-Recovery (PITR).
+

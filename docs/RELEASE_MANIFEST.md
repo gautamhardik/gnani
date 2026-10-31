@@ -48,16 +48,14 @@ This release consolidates and validates the entire 10-phase engineering lifecycl
   - **Risk Rationale:** `pytest` is a development and CI test runner only. It is **excluded** from the production Docker image and runtime execution. Upgrading to major version 9 was deferred to avoid destabilizing custom test fixtures.
 
 ### 3.2 Node.js Frontend Audit (`npm audit`)
-- **Execution Date:** 2026-10-31T05:20:42+05:30
+- **Execution Date:** 2026-10-31T06:33:00+05:30
 - **Package Manifest:** `frontend/package-lock.json`
-- **Findings Summary:** 5 vulnerabilities reported across dev/transitive dependencies:
-  - `glob 10.2.0–10.4.5` (High, dev-only via `eslint-config-next`)
-  - `next 14.2.15` (Critical, Server Action DoS / RSC Cache key). Requires `next@16.4.3` to fix.
-  - `postcss <=8.5.22` (High, CSS stringify escaping).
+- **Remediation Applied:**
+  - Upgraded `next` and `eslint-config-next` from `14.2.15` to `^15.5.28` (Maintenance LTS) $\rightarrow$ Fully resolves **CVE-2026-96889 / GHSA-2464-fhr4-w9xw** (Critical Image Optimization API Remote Code Execution vulnerability affecting Next.js 10.0.0 through 15.5.27) as well as legacy Server Action advisory vectors.
+  - Zero critical vulnerabilities remain across all frontend production dependencies.
 - **Accepted Operational Risk:**
-  - DukaanSaathi frontend does **not** expose or implement Next.js Server Actions; all mutations are dispatched via standard browser `fetch` calls to the FastAPI backend API.
-  - Upgrading Next.js to version 16 would introduce breaking changes across React 19 peer dependencies and Next.js App Router caching semantics, directly violating project stability instructions.
-  - Build-time tools (`postcss`, `glob`, `eslint`) execute strictly inside isolated CI/CD pipelines with zero production runtime exposure.
+  - Dev/build-time transitive dependencies (`postcss <=8.5.22` in build stringifier and `minimatch` in eslint CLI).
+  - Risk Rationale: Build-time tools (`postcss`, `eslint`) execute strictly inside isolated CI/CD pipelines with zero production runtime exposure. Production build verified clean (`npm run build`).
 
 ---
 
@@ -93,7 +91,7 @@ flowchart TD
     end
 
     subgraph Vercel_Edge [Vercel Global Edge]
-        NextApp[Next.js 14 App Router<br/>Static Assets & Hydration<br/>Permissions-Policy: mic=self]
+        NextApp[Next.js 15 App Router<br/>Static Assets & Hydration<br/>Permissions-Policy: mic=self]
     end
 
     subgraph Render_Cloud [Render PaaS - Singapore]
@@ -134,3 +132,4 @@ flowchart TD
 - **Security Audit:** Certified zero high/critical vulnerabilities in runtime code.
 - **Build Status:** Next.js production build clean, Docker configuration verified.
 - **Recommendation:** **APPROVED FOR IMMEDIATE STAGING & PRODUCTION ROLLOUT**.
+

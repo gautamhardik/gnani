@@ -65,3 +65,4 @@ def test_production_environment_accepts_valid_configuration():
     assert config.APP_ENV == "production"
     assert config.DATABASE_URL.startswith("postgresql://")
     assert len(config.SECRET_KEY) >= 32
+

@@ -1081,7 +1081,7 @@ To achieve seamless, repeatable production deployment without environmental dive
   - Authored 4 automated tests in `tests/backend/test_production_config_validation.py` verifying both rejection of insecure settings and acceptance of valid credentials.
 - **Empirical Dependency Audit & Vulnerability Remediation:**
   - Ran `pip-audit 2.10.1`: upgraded `pydantic-settings` to 2.16.2 (fixing CVE-2026-58203) and `python-multipart` to 0.0.32 (fixing PYSEC-2026-3036..3040). Documented test-runner risk acceptance for `pytest 8.4.2` (excluded from production Docker container).
-  - Ran `npm audit`: documented risk acceptance for Next.js 14.2.15 server action advisories (0 server actions used; Next.js 16 represents prohibited breaking upgrade).
+  - Remediated Next.js Critical Vulnerability: Upgraded `next` and `eslint-config-next` from 14.2.15 to `15.5.28` (Maintenance LTS), completely resolving CVE-2026-96889 / GHSA-2464-fhr4-w9xw (Critical Image Optimization API Remote Code Execution) and legacy Server Action advisories. Zero critical vulnerabilities remain across frontend dependencies. Production build (`next build`) and test suite (29 Vitest) verified 100% passing.
 - **Test Arithmetic Reconciliation:**
   - Formally reconciled Phase 9 reported count (195) vs unique test node IDs (174) due to double-counting of `test_security_hardening.py` (21 tests).
   - Established current authoritative count: 179 unique tests (150 Python + 29 Vitest), 100% passing.
@@ -1098,6 +1098,9 @@ To achieve seamless, repeatable production deployment without environmental dive
 - `frontend/.env.example` (Modified: added NEXT_PUBLIC_STORE_ID and public variable guidance)
 - `backend/app/core/config.py` (Modified: fail-fast startup validator for staging/production secrets)
 - `requirements.txt` (Modified: bumped pydantic-settings to 2.16.2 and python-multipart to 0.0.32)
+- `frontend/package.json` (Modified: upgraded next and eslint-config-next to 15.5.28 resolving CVE-2026-96889)
+- `frontend/package-lock.json` (Modified: updated locked dependencies for Next.js 15.5.28)
+- `frontend/tsconfig.json` (Modified: updated target for Next.js 15 compilation)
 - `tests/backend/test_production_config_validation.py` (Created: 4 tests for config validation)
 - `docs/RELEASE_MANIFEST.md` (Created: production release candidate manifest v1.0.0-rc1)
 - `README.md` (Created: comprehensive root documentation and architecture guide)

@@ -57,3 +57,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 # Production ASGI server launch command:
 # 1 worker enforced due to in-memory sliding window rate limiting (requires Redis for >1 workers)
 CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--proxy-headers", "--forwarded-allow-ips", "*"]
+
