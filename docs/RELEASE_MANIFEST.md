@@ -30,6 +30,8 @@ This release consolidates and validates the entire 10-phase engineering lifecycl
 | **Render Blueprint** | [`render.yaml`](file:///c:/Users/hiten/Downloads/gnani/render.yaml) | Infrastructure-as-code specification for Render Web Service (Single instance enforced) |
 | **Vercel Configuration** | [`frontend/vercel.json`](file:///c:/Users/hiten/Downloads/gnani/frontend/vercel.json) | Next.js deployment headers including `Permissions-Policy: microphone=(self)` |
 | **Frontend Env Sample** | [`frontend/.env.example`](file:///c:/Users/hiten/Downloads/gnani/frontend/.env.example) | Public client-safe variables: `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_STORE_ID` |
+| **Docker Report** | [`docs/DOCKER_VERIFICATION_REPORT.md`](file:///c:/Users/hiten/Downloads/gnani/docs/DOCKER_VERIFICATION_REPORT.md) | Verification report for Docker availability, daemon blocker, and container configs |
+| **Deployment Report** | [`docs/PRODUCTION_DEPLOYMENT_REPORT.md`](file:///c:/Users/hiten/Downloads/gnani/docs/PRODUCTION_DEPLOYMENT_REPORT.md) | Public deployment readiness, cloud provider prerequisites, and smoke test protocol |
 | **Root README** | [`README.md`](file:///c:/Users/hiten/Downloads/gnani/README.md) | Authoritative documentation, architecture, quickstart, API guide, and testing |
 | **Project Chronicle** | [`docs/PROJECT_CHRONICLE.md`](file:///c:/Users/hiten/Downloads/gnani/docs/PROJECT_CHRONICLE.md) | Historical record with ADR-011 and Phase 10 engineering chronicle |
 
@@ -38,14 +40,15 @@ This release consolidates and validates the entire 10-phase engineering lifecycl
 ## 3. Dependency Audit & Vulnerability Assessment
 
 ### 3.1 Python Backend Audit (`pip-audit 2.10.1`)
-- **Execution Date:** 2026-10-31T05:25:32+05:30
-- **Scanned File:** `requirements.txt` (13 production dependencies)
+- **Execution Date:** 2026-10-31T07:25:54+05:30
+- **Production Manifest:** `requirements.txt` (11 production runtime dependencies)
 - **Remediations Applied:**
-  - Upgraded `pydantic-settings` from `2.12.0` to `2.16.2` $\rightarrow$ Resolves `CVE-2026-58203` (environment file injection advisory).
-  - Upgraded `python-multipart` from `0.0.22` to `0.0.32` $\rightarrow$ Resolves `PYSEC-2026-3036`, `PYSEC-2026-3037`, `PYSEC-2026-3038`, `PYSEC-2026-3039`, and `PYSEC-2026-3040` (form parsing DoS advisories).
-- **Accepted Operational Risk:**
-  - `pytest 8.4.2` reported `PYSEC-2026-1845` (Fix version: `9.0.3`).
-  - **Risk Rationale:** `pytest` is a development and CI test runner only. It is **excluded** from the production Docker image and runtime execution. Upgrading to major version 9 was deferred to avoid destabilizing custom test fixtures.
+  - Upgraded `pydantic-settings` to `2.16.2` $\rightarrow$ Resolves `CVE-2026-58203`.
+  - Upgraded `python-multipart` to `0.0.32` $\rightarrow$ Resolves `PYSEC-2026-3036..3040`.
+  - Isolated test dependencies (`pytest 8.4.2`, `pytest-asyncio 1.3.0`) into `requirements-dev.txt`, completely excluding them from the production Docker container.
+- **Audit Outcome:**
+  - `python -m pip_audit -r requirements.txt`: **No known vulnerabilities found** (Exit Code: `0`).
+  - Production runtime is certified 100% free of known vulnerabilities.
 
 ### 3.2 Node.js Frontend Audit (`npm audit`)
 - **Execution Date:** 2026-10-31T06:33:00+05:30

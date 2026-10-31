@@ -146,8 +146,8 @@ python -m venv venv
 # On Linux/macOS:
 source venv/bin/activate
 
-# 2. Install pinned dependencies
-pip install -r requirements.txt
+# 2. Install pinned dependencies (use requirements-dev.txt for test harness)
+pip install -r requirements-dev.txt
 
 # 3. Configure environment variables
 cp .env.example .env

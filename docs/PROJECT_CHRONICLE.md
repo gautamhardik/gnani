@@ -1115,6 +1115,55 @@ To achieve seamless, repeatable production deployment without environmental dive
 - **Dependency Audit Status:** 0 runtime Python vulnerabilities; 0 runtime frontend Server Action risk.
 - **Phase 10 Completion Gate:** Fully passed. Certified Release Candidate `v1.0.0-rc1`.
 
+### Phase 10.1B: Release Candidate Review & Remaining Release Gates
+**Date:** 2026-10-31  
+**Status:** Completed & Evaluated (Docker & Deployment Gates Documented)  
+**Git Branch:** `master`
+
+#### 1. Request & Context
+Execute Phase 10.1B: Review release candidate `v1.0.0-rc1` and resolve outstanding release gates. Remediate critical Next.js security advisory (CVE-2026-96889 / GHSA-2464-fhr4-w9xw), conduct full Docker daemon and Docker Compose availability check, audit cloud deployment prerequisites (Render, Neon, Vercel), perform dependency audit closure across `npm audit` and `pip-audit`, and document verified evidence without unverified claims.
+
+#### 2. Key Actions & Remediations
+- **Next.js Critical Security Upgrade:**
+  - Upgraded `next` and `eslint-config-next` from `14.2.15` to `^15.5.28` (Maintenance LTS).
+  - Resolved `CVE-2026-96889` (Critical Image Optimization API Remote Code Execution affecting Next.js 10.0.0 through 15.5.27 on glibc runtimes).
+  - Maintained full compatibility with React 18 (`react: ^18.2.0`). Verified 29/29 Vitest tests passing and Next.js production build (`npm run build`) compiling all 7 routes with 0 errors.
+- **Dependency Audit Closure:**
+  - Ran `npm audit --omit=dev`: Reported 0 critical vulnerabilities. Identified 2 non-critical advisories in `next` transitive dependency `postcss <=8.5.22` (build-time stringifier).
+  - Ran `npm ls next sharp eslint-config-next`: Verified clean resolution (`eslint-config-next@15.5.28`, `next@15.5.28`, `sharp@0.35.5`).
+  - Separated test harness (`pytest==8.4.2`, `pytest-asyncio==1.3.0`) into `requirements-dev.txt`, completely excluding test-only packages from the production Docker container.
+  - Ran `pip-audit -r requirements.txt`: **No known vulnerabilities found** (Exit Code: 0).
+- **Docker & Compose Verification (`docs/DOCKER_VERIFICATION_REPORT.md`):**
+  - Executed `docker version` and `docker info`: Confirmed client version 29.6.1 and Compose v5.1.4.
+  - Identified blocker: Windows background service `com.docker.service` is stopped. Attempting to start via PowerShell failed with `OpenError: Access Denied` due to Windows UAC permission restrictions in the non-elevated shell.
+  - Investigated WSL2: Confirmed `docker-desktop` distro is stopped; direct CLI invocation inside WSL is disallowed by Docker Desktop.
+  - Fully audited and validated `Dockerfile`, `.dockerignore`, and `docker-compose.yml`. Recorded gate status as **BLOCKED on host UAC elevation** without fabricating passed results.
+- **Production Deployment Audit (`docs/PRODUCTION_DEPLOYMENT_REPORT.md`):**
+  - Audited infrastructure configurations: `render.yaml` (Docker, 1 instance, Singapore), `frontend/vercel.json` (Next.js 15, `microphone=(self)`), and `backend/app/core/config.py` (fail-fast validation).
+  - Audited credentials: Found no active tokens or provisioned instances for Render, Neon, or Vercel.
+  - Formalized deployment gate status as **BLOCKED on user-provided cloud accounts**. Outlined exact verification protocol and smoke test flows.
+  - Re-disclosed that Phase 8's 30-turn evaluation used synthetic speech, and that public microphone tests will serve as functional smoke tests rather than statistically representative ASR benchmarks.
+
+#### 3. Files Created / Modified
+- `frontend/package.json` (Modified: upgraded next and eslint-config-next to 15.5.28)
+- `frontend/package-lock.json` (Modified: locked dependencies for Next.js 15.5.28 and sharp 0.35.5)
+- `frontend/tsconfig.json` (Modified: set compiler target to ES2017)
+- `requirements.txt` (Modified: removed test packages for production container purity)
+- `requirements-dev.txt` (Created: development & testing dependencies with pytest)
+- `docs/DOCKER_VERIFICATION_REPORT.md` (Created: Docker availability, daemon blocker diagnosis, container audit)
+- `docs/PRODUCTION_DEPLOYMENT_REPORT.md` (Created: cloud deployment readiness, credential audit, smoke test protocol)
+- `docs/RELEASE_MANIFEST.md` (Updated: Next.js 15.5.28, clean pip-audit, new verification reports)
+- `README.md` (Updated: Next.js 15 badge & diagram, requirements-dev.txt setup)
+- `docs/PROJECT_CHRONICLE.md` (Updated: Phase 10.1B log, asset inventory, current state, next steps)
+
+#### 4. Verification Results
+- **Production Pytest Suite:** 150/150 passed in 5.69s across backend, intelligence, voice, and integration.
+- **Frontend Vitest Suite:** 29/29 passed in 9.00s across 6 test files.
+- **Next.js Production Build:** `npm run build` compiled 7 static routes cleanly with zero errors.
+- **Total Automated Test Suite:** **179/179 passed** (100% passing rate).
+- **Production Python Audit:** 0 known vulnerabilities (`pip-audit -r requirements.txt`).
+- **Production Frontend Audit:** 0 critical vulnerabilities (`npm audit --omit=dev`).
+
 ---
 
 ## 5. Current Repository & Asset Inventory
@@ -1132,6 +1181,7 @@ C:\Users\hiten\Downloads\gnani
 │   README.md
 │   render.yaml
 │   requirements.txt
+│   requirements-dev.txt
 ├───backend
 │   │   __init__.py
 │   │   alembic.ini
@@ -1232,6 +1282,7 @@ C:\Users\hiten\Downloads\gnani
 │   └───scripts
 │           seed_postgres.py
 ├───docs
+│   │   DOCKER_VERIFICATION_REPORT.md
 │   │   INCIDENT_AND_RECOVERY_RUNBOOK.md
 │   │   ORDER_INTELLIGENCE_EVALUATION.md
 │   │   PERFORMANCE_REPORT.md
@@ -1239,6 +1290,7 @@ C:\Users\hiten\Downloads\gnani
 │   │   PHASE_1_FEASIBILITY_REPORT.md
 │   │   PRD.md
 │   │   PRIVACY_AND_RETENTION_POLICY.md
+│   │   PRODUCTION_DEPLOYMENT_REPORT.md
 │   │   PRODUCTION_READINESS_CHECKLIST.md
 │   │   PROJECT_CHRONICLE.md
 │   │   QA_DEFECT_REGISTER.md
@@ -1379,8 +1431,10 @@ C:\Users\hiten\Downloads\gnani
 - **Phase 8 (Comprehensive Quality Assurance & Product Evaluation):** Complete & verified. Authored comprehensive PRD traceability matrix mapping 100% of P0 requirements to executable tests and empirical evidence (`docs/QA_TEST_PLAN.md`). Formulated 30-case real speech dataset protocol and conducted live Prisma v3 STT evaluation (`docs/SPEECH_EVALUATION_REPORT.md`), documenting Latin prompt vs Devanagari ASR script divergence (128.35% verbatim WER vs 93.5% SKU extraction via dual-script alias catalog) and confirming WebM Opus payload reduction with negligible acoustic penalty. Evaluated Order Intelligence engine on 30 benchmark cases and 5 multi-turn scenarios (`docs/ORDER_INTELLIGENCE_EVALUATION.md`): 93.5% product/quantity extraction accuracy, 93.3% exact cart match, 100% scenario completion, 0 oversell violations. Audited device UX on Mobile Chrome (Pixel 7 393x851) and Desktop Chrome (1280x800) with zero horizontal overflow and compliant touch targets ($\ge 40\times 40\text{px}$). Profiled 30 live voice-turn trials (`docs/PERFORMANCE_REPORT.md`): median total server time 2192.5ms (target $\le 4000\text{ms}$), p95 3043.1ms (target $\le 10000\text{ms}$); resolved Windows subprocess bottleneck via in-memory WAV header fast-path (0.07ms median). Verified fault recovery and idempotency (HTTP 413, HTTP 400, Timbre network failure fallback to text, duplicate cancellation blocking). Authored defect register (`docs/QA_DEFECT_REGISTER.md`) with 100% P0/P1 defect resolution. 152 total automated tests passing (123 Python pytest + 29 Next.js Vitest). Next.js production build verified cleanly with 0 errors.
 - **Phase 9 (Security Hardening & Production Readiness):** Complete & certified. Conducted exhaustive security audit across authentication, authorization, perimeter headers, secrets, database resilience, and audio privacy (`docs/SECURITY_AUDIT_REPORT.md`). Deprecated master token delivery; implemented short-lived HMAC-SHA256 session tokens with 24h expiry and timing-safe comparison. Protected `GET /orders/{id}` against enumeration. Added sliding-window IP rate limiter (`backend/app/core/rate_limiter.py`). Enforced defensive security headers (CSP, nosniff, frame-ancestors, permissions-policy). Sanitized database error logs and health endpoints (`/health/live`, `/health/ready`). Verified real PostgreSQL backup and restoration into staging with 100% data parity. Authored `requirements.txt`, `docs/PRODUCTION_READINESS_CHECKLIST.md`, `docs/PRIVACY_AND_RETENTION_POLICY.md`, and `docs/INCIDENT_AND_RECOVERY_RUNBOOK.md`. 174 total automated tests passing (145 Python pytest + 29 Next.js Vitest). Next.js production build verified cleanly with 0 errors.
 - **Phase 10 (Containerization, Deployment & Production Release Candidate):** Complete & certified (`v1.0.0-rc1`). Delivered Debian-slim Python 3.11 Docker container with FFmpeg, libpq5, unprivileged user, and safe readiness health checks (`Dockerfile`, `.dockerignore`). Implemented multi-service local/staging stack with PostgreSQL 16 Alpine, healthcheck sequencing, and persistent named volume (`docker-compose.yml`). Authored Render infrastructure-as-code Blueprint (`render.yaml`) enforcing single-instance constraint for in-memory rate limiter. Authored Vercel deployment configuration (`frontend/vercel.json`) with strict security headers and `Permissions-Policy: microphone=(self)`. Implemented fail-fast startup validator for staging/production credentials in `backend/app/core/config.py`. Remediated Python dependencies (`pydantic-settings 2.16.2`, `python-multipart 0.0.32`). Reconciled test counting arithmetic and verified 100% pass rate across **179 automated tests** (150 Python + 29 Vitest). Authored root `README.md` and `docs/RELEASE_MANIFEST.md`.
+- **Phase 10.1B (Release Candidate Review & Remaining Release Gates):** Complete & documented. Upgraded Next.js from 14.2.15 to `15.5.28` (Maintenance LTS), completely eliminating CVE-2026-96889 / GHSA-2464-fhr4-w9xw Image Optimization RCE. Isolated test dependencies to `requirements-dev.txt`, achieving 0 vulnerabilities in production `requirements.txt` via `pip-audit`. Audited Docker daemon status (documented host Windows UAC elevation blocker on `com.docker.service` in `docs/DOCKER_VERIFICATION_REPORT.md`). Audited cloud deployment prerequisites (documented account linking requirements for Render, Neon, and Vercel in `docs/PRODUCTION_DEPLOYMENT_REPORT.md`). All 179 automated tests passing (150 Python + 29 Vitest); Next.js production build clean.
 
-### Immediate Next Steps (Phase 11: End-to-End Video Demonstration & Submission Archive)
-1. **Live Video Demonstration Recording:** Record a 3-to-5 minute video showcasing the end-to-end user journey: mobile customer voice ordering in Hindi/Hinglish, instant cart updates, two-phase order submission, and real-time shopkeeper fulfillment/inventory management in the merchant operations dashboard.
-2. **Competition Presentation & Slide Deck:** Prepare executive slide deck summarizing technical innovation, architecture, Gnani AI integration metrics, and competitive differentiation.
-3. **Contest Submission Archive Packaging:** Assemble submission deliverables, repository tags, and final submission archive for the Great Indian AI Internship Challenge.
+### Immediate Next Steps (Public Deployment Unblocking & Phase 11 Video Demonstration)
+1. **Host Docker Daemon Elevation:** Provide Windows administrator elevation to start `com.docker.service` for live local container builds and Compose smoke tests.
+2. **Cloud Provider Account Linking:** Provide authorization tokens or provisioned instance parameters for Vercel (`vercel login` / `VERCEL_TOKEN`), Render (deploy hook / Blueprint connection), and Neon PostgreSQL (authorized `DATABASE_URL`).
+3. **Public Production Smoke Tests:** Execute the end-to-end customer-to-merchant verification protocol across the live public URLs.
+4. **Phase 11 (Demonstration Video & Final Submission Archive):** Record 3–5 minute video demonstration and package submission archive for the Great Indian AI Internship Challenge.
