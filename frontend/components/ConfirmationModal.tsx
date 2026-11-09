@@ -92,11 +92,11 @@ export function ConfirmationModal({
                   <div>
                     <div className="font-semibold text-dukaan-text">{it.name}</div>
                     <div className="text-dukaan-muted">
-                      {it.quantity} {it.unit} × ₹{it.unit_price.toFixed(2)}
+                      {it.quantity} {it.unit} × ₹{Number(it.unit_price || 0).toFixed(2)}
                     </div>
                   </div>
                   <div className="font-bold text-dukaan-text">
-                    ₹{it.subtotal.toFixed(2)}
+                    ₹{Number(it.subtotal || 0).toFixed(2)}
                   </div>
                 </div>
               ))}
@@ -106,7 +106,7 @@ export function ConfirmationModal({
           <div className="pt-2 border-t border-dukaan-border flex items-center justify-between">
             <span className="text-sm font-semibold text-dukaan-text">Kul Rashi (Total):</span>
             <span className="text-lg font-extrabold text-dukaan-primaryDark">
-              ₹{totalAmount.toFixed(2)}
+              ₹{Number(totalAmount || 0).toFixed(2)}
             </span>
           </div>
         </div>

@@ -79,7 +79,7 @@ export default function DukaanSaathiApp() {
             if (sessDetail && sessDetail.status === "active") {
               setSessionId(sessDetail.session_id);
               setCartItems(sessDetail.current_cart || []);
-              setCartTotal(sessDetail.total_amount || 0);
+              setCartTotal(Number(sessDetail.total_amount || 0));
               return;
             }
           } catch {
@@ -145,7 +145,7 @@ export default function DukaanSaathiApp() {
       // 3. Update authoritative cart state
       if (turnResponse.cart) {
         setCartItems(turnResponse.cart.items || []);
-        setCartTotal(turnResponse.cart.total_amount || 0);
+        setCartTotal(Number(turnResponse.cart.total_amount || 0));
       }
 
       // 4. Play assistant audio
@@ -175,14 +175,14 @@ export default function DukaanSaathiApp() {
     if (!sessionId) return;
     const updated = await updateCartItem(sessionId, productId, quantity);
     setCartItems(updated.current_cart || []);
-    setCartTotal(updated.total_amount || 0);
+    setCartTotal(Number(updated.total_amount || 0));
   };
 
   const handleRemoveCartItem = async (productId: string) => {
     if (!sessionId) return;
     const updated = await removeCartItem(sessionId, productId);
     setCartItems(updated.current_cart || []);
-    setCartTotal(updated.total_amount || 0);
+    setCartTotal(Number(updated.total_amount || 0));
   };
 
   // Final Order Confirmation Submission
@@ -264,7 +264,7 @@ export default function DukaanSaathiApp() {
 
       if (data.cart) {
         setCartItems(data.cart);
-        setCartTotal(data.total_amount || 0);
+        setCartTotal(Number(data.total_amount || 0));
       }
     } catch (e: unknown) {
       console.error("Clarification error:", e);

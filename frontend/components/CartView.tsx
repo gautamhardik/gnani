@@ -91,7 +91,7 @@ export function CartView({
                 </h4>
                 <div className="text-xs text-dukaan-muted mt-0.5 flex items-center gap-2">
                   <span>
-                    ₹{item.unit_price.toFixed(2)} / {item.unit}
+                    ₹{Number(item.unit_price || 0).toFixed(2)} / {item.unit}
                   </span>
                   {item.requested_quantity && (
                     <span className="text-[10px] bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded">
@@ -100,7 +100,7 @@ export function CartView({
                   )}
                 </div>
                 <div className="text-xs font-bold text-dukaan-primaryDark mt-1">
-                  Subtotal: ₹{item.subtotal.toFixed(2)}
+                  Subtotal: ₹{Number(item.subtotal || 0).toFixed(2)}
                 </div>
               </div>
 
@@ -152,7 +152,7 @@ export function CartView({
       <div className="bg-dukaan-card border border-dukaan-border rounded-xl p-4 shadow-warm mt-4">
         <div className="flex items-center justify-between text-sm text-dukaan-muted mb-1">
           <span>Items Total ({items.length})</span>
-          <span>₹{totalAmount.toFixed(2)}</span>
+          <span>₹{Number(totalAmount || 0).toFixed(2)}</span>
         </div>
         <div className="flex items-center justify-between text-sm text-dukaan-muted mb-3">
           <span>Dukaan Delivery / Packaging</span>
@@ -162,7 +162,7 @@ export function CartView({
           <div>
             <div className="text-xs text-dukaan-muted">Kul Rashi (Grand Total)</div>
             <div className="text-lg font-bold text-dukaan-text">
-              ₹{totalAmount.toFixed(2)}
+              ₹{Number(totalAmount || 0).toFixed(2)}
             </div>
           </div>
           <button

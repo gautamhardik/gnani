@@ -98,7 +98,7 @@ export function VoiceOrderingView({
             </div>
             <div>
               <div className="text-xs font-bold text-dukaan-text">
-                {cartItems.length} {cartItems.length === 1 ? "Item" : "Items"} • ₹{cartTotal.toFixed(2)}
+                {cartItems.length} {cartItems.length === 1 ? "Item" : "Items"} • ₹{Number(cartTotal || 0).toFixed(2)}
               </div>
               <div className="text-[10px] text-dukaan-muted">Verified Server Rates</div>
             </div>
