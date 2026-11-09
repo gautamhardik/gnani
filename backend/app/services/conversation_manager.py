@@ -452,10 +452,11 @@ class ConversationManager:
                 )
             else:
                 # Product not found in catalogue (TC026: "dragon fruit")
+                display_query = product_query.title() if product_query else "Yeh item"
                 action = TurnAction(
                     action="product_not_found",
                     clarification_type=ClarificationType.PRODUCT_NOT_FOUND,
-                    message=f"Maaf kijiye, yeh item humaare store mein uplabdh nahi hai."
+                    message=f"Maaf kijiye, '{display_query}' humaare store mein uplabdh nahi hai."
                 )
                 return TurnResponse(
                     session_id=session_id,
@@ -512,11 +513,15 @@ class ConversationManager:
             is_avail, current_stock, threshold = self.inventory_service.check_availability(prod.product_id, sell_qty)
             if not is_avail:
                 self.session_contexts.setdefault(session_id, {})["pending_product_id"] = prod.product_id
+                if current_stock <= 0:
+                    msg = f"Maaf kijiye, '{prod.name}' abhi out of stock hai."
+                else:
+                    msg = f"'{prod.name}' ke abhi sirf {current_stock} {sell_unit} available hain. Kya {current_stock} add kar doon?"
                 action = TurnAction(
                     action="reject_insufficient_stock",
                     clarification_type=ClarificationType.INSUFFICIENT_STOCK,
                     stock_quote=current_stock,
-                    message=f"Abhi sirf {current_stock} {sell_unit} available hain. Kya {current_stock} add kar doon?"
+                    message=msg
                 )
                 return TurnResponse(
                     session_id=session_id,

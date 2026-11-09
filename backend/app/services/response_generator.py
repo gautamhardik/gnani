@@ -111,6 +111,14 @@ class AssistantResponseGenerator:
             return action.message or "Kripya bataiye kitna samaan chahiye, jaise ek kilo ya do packet."
 
         # 5. Action: check_stock or Insufficient Stock
+        if act_name == "reject_insufficient_stock":
+            if action.message:
+                return action.message
+            if action.stock_quote is not None:
+                stock_val = int(action.stock_quote) if action.stock_quote % 1 == 0 else float(action.stock_quote)
+                return f"Maaf kijiye, hamare paas abhi sirf {stock_val} available hain. Kya {stock_val} add kar doon?"
+            return action.message or "Maaf kijiye, maangi gayi quantity stock mein available nahi hai."
+
         if act_name == "check_stock":
             if action.stock_quote is not None:
                 stock_val = int(action.stock_quote) if action.stock_quote % 1 == 0 else float(action.stock_quote)
@@ -135,6 +143,8 @@ class AssistantResponseGenerator:
 
         # 8. Action: product_not_found
         if act_name == "product_not_found":
+            if action.message:
+                return action.message
             return "Maaf kijiye, yeh item hamari dukaan mein nahi mila. Kya aap kuch aur lena chahenge?"
 
         # 9. Action: replace_quantity (Correction)
