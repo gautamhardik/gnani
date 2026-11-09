@@ -15,6 +15,7 @@ export function useAudioPlayer() {
   const [playbackError, setPlaybackError] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const onEndedCallbackRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -32,11 +33,17 @@ export function useAudioPlayer() {
 
       audio.onended = () => {
         setIsPlaying(false);
+        if (onEndedCallbackRef.current) {
+          const cb = onEndedCallbackRef.current;
+          onEndedCallbackRef.current = null;
+          cb();
+        }
       };
 
       audio.onerror = () => {
         setIsPlaying(false);
         setPlaybackError("Failed to play assistant audio response.");
+        onEndedCallbackRef.current = null;
       };
     }
 
@@ -45,16 +52,20 @@ export function useAudioPlayer() {
         audioRef.current.pause();
         audioRef.current.src = "";
         audioRef.current = null;
+        onEndedCallbackRef.current = null;
       }
     };
   }, []);
 
-  const playAudio = useCallback(async (url?: string): Promise<boolean> => {
+  const playAudio = useCallback(async (url?: string, onEnded?: () => void): Promise<boolean> => {
     const targetUrl = url || currentUrl;
     if (!targetUrl || !audioRef.current) return false;
 
     setPlaybackError(null);
     setCurrentUrl(targetUrl);
+    if (onEnded) {
+      onEndedCallbackRef.current = onEnded;
+    }
 
     try {
       if (audioRef.current.src !== targetUrl) {
@@ -82,6 +93,17 @@ export function useAudioPlayer() {
     }
   }, []);
 
+  const stopAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      try {
+        audioRef.current.currentTime = 0;
+      } catch {}
+      setIsPlaying(false);
+      onEndedCallbackRef.current = null;
+    }
+  }, []);
+
   return {
     isPlaying,
     autoplayBlocked,
@@ -89,6 +111,7 @@ export function useAudioPlayer() {
     playbackError,
     playAudio,
     pauseAudio,
+    stopAudio,
   };
 }
 

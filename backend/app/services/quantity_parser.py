@@ -127,7 +127,28 @@ class QuantityParser:
                 raw_unit=None,
                 normalized_amount=None,
                 normalized_unit=None,
-                is_unmeasurable=True
+                is_unmeasurable=True,
+                is_explicit=True
+            )
+
+        # 0. Check for rupee denomination phrases: e.g. "23 rupaye ki cheeni", "10 rs wala", "50 rupees"
+        rupee_match = re.search(r"\b(\d+(?:\.\d+)?)\s*(?:rupaye|rupayee|rupees|rs\.?|inr|rupya|rupe)\b", clean)
+        if rupee_match:
+            rupee_val = Decimal(rupee_match.group(1))
+            # Also extract unit if mentioned (e.g. "50 rupaye ka ek kilo")
+            found_unit = None
+            for u_word in sorted(UNIT_MAP.keys(), key=len, reverse=True):
+                if re.search(rf"(?<!-)\b{re.escape(u_word)}\b", clean):
+                    found_unit = UNIT_MAP[u_word]
+                    break
+            return ExtractedQuantity(
+                raw_amount=None,
+                raw_unit=found_unit,
+                normalized_amount=None,
+                normalized_unit=found_unit,
+                is_unmeasurable=False,
+                is_explicit=True,
+                rupee_amount=rupee_val
             )
 
         # 1. Check compound number phrases first: e.g. "dhai sau gram", "paanch sau gram", "aadha litre"
@@ -150,7 +171,8 @@ class QuantityParser:
                     raw_amount=amount,
                     raw_unit=unit,
                     normalized_amount=amount,
-                    normalized_unit=unit
+                    normalized_unit=unit,
+                    is_explicit=True
                 )
 
         # Strip sentence-ending imperative verbs so helper 'do' (give) is not mistaken for number 2
@@ -175,7 +197,8 @@ class QuantityParser:
                 raw_amount=val,
                 raw_unit=found_unit,
                 normalized_amount=val,
-                normalized_unit=found_unit
+                normalized_unit=found_unit,
+                is_explicit=True
             )
 
         for word in sorted(NUMBER_WORDS.keys(), key=len, reverse=True):
@@ -188,7 +211,8 @@ class QuantityParser:
                     raw_amount=val,
                     raw_unit=found_unit,
                     normalized_amount=val,
-                    normalized_unit=found_unit
+                    normalized_unit=found_unit,
+                    is_explicit=True
                 )
 
         return ExtractedQuantity(
@@ -196,7 +220,8 @@ class QuantityParser:
             raw_unit=found_unit,
             normalized_amount=None,
             normalized_unit=found_unit,
-            is_unmeasurable=False
+            is_unmeasurable=False,
+            is_explicit=False
         )
 
     @staticmethod
@@ -213,6 +238,22 @@ class QuantityParser:
             - 'clarify_unit'
             - 'clarify_package_fraction'
         """
+        # Rupee denomination support: calculate sellable quantity from rupee budget and unit price
+        if extracted.rupee_amount is not None:
+            unit_price = Decimal(str(product.price_inr))
+            if unit_price > 0:
+                sale_unit_lower = product.sale_unit.lower()
+                if sale_unit_lower in ["kg", "l", "litre", "liter", "g", "gm", "ml"]:
+                    calculated_qty = (extracted.rupee_amount / unit_price).quantize(Decimal("0.001"))
+                    # Normalize trailing zeros (e.g. 0.500 -> 0.5)
+                    norm_qty = calculated_qty.normalize()
+                    if norm_qty == norm_qty.to_integral():
+                        norm_qty = Decimal(int(norm_qty))
+                    return norm_qty, product.sale_unit, None
+                else:
+                    count = max(Decimal("1"), (extracted.rupee_amount / unit_price).quantize(Decimal("1")))
+                    return count, product.sale_unit, None
+
         if extracted.is_unmeasurable or extracted.raw_amount is None:
             return None, None, "clarify_quantity"
 

@@ -59,6 +59,8 @@ class ExtractedQuantity(BaseModel):
     normalized_amount: Optional[Decimal] = None
     normalized_unit: Optional[str] = None
     is_unmeasurable: bool = False  # e.g. "thoda sa"
+    is_explicit: bool = False  # True when an explicit number, word, fraction, or currency amount was uttered
+    rupee_amount: Optional[Decimal] = None  # e.g. "23 rupaye ki cheeni"
 
 
 class ProductMatchCandidate(BaseModel):

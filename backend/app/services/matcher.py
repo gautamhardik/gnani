@@ -18,6 +18,33 @@ from backend.app.schemas.intelligence import (
     ClarificationType,
 )
 
+GENERIC_CATEGORY_MAP: Dict[str, List[str]] = {
+    "toothpaste": ["toothpaste", "colgate", "oral care", "manjan"],
+    "manjan": ["toothpaste", "colgate", "oral care", "manjan"],
+    "tel": ["mustard oil", "sunflower oil", "soybean oil", "coconut oil", "hair oil", "oil"],
+    "cooking oil": ["mustard oil", "sunflower oil", "soybean oil", "refined oil"],
+    "oil": ["mustard oil", "sunflower oil", "soybean oil", "coconut oil", "hair oil", "oil"],
+    "sarson tel": ["mustard oil"],
+    "sabun": ["soap", "lifebuoy", "dove", "bathing soap", "detergent bar"],
+    "soap": ["soap", "lifebuoy", "dove", "bathing soap", "detergent bar"],
+    "shampoo": ["shampoo", "clinic plus", "hair care"],
+    "biscuit": ["biscuit", "biscuits", "good day", "oreo", "rusk", "cookies"],
+    "biscuits": ["biscuit", "biscuits", "good day", "oreo", "rusk", "cookies"],
+    "namkeen": ["namkeen", "aloo bhujia", "kurkure", "lays", "chips", "bhujia", "snacks"],
+    "chai": ["tea", "tata tea", "chai"],
+    "tea": ["tea", "tata tea", "chai"],
+    "chawal": ["regular rice", "basmati", "sona masoori", "rice", "chawal"],
+    "rice": ["regular rice", "basmati", "sona masoori", "rice", "chawal"],
+    "dal": ["toor dal", "moong dal", "masoor dal", "urad dal", "chana dal", "dal", "pulses"],
+    "daal": ["toor dal", "moong dal", "masoor dal", "urad dal", "chana dal", "dal", "pulses"],
+    "aata": ["atta", "wheat flour", "gehu"],
+    "atta": ["atta", "wheat flour", "gehu"],
+    "doodh": ["milk", "taaza", "gold", "toned", "dairy"],
+    "milk": ["milk", "taaza", "gold", "toned", "dairy"],
+    "makhana": ["makhana", "fox nuts"],
+    "masala": ["turmeric", "haldi", "chilli powder", "mirch", "coriander", "dhaniya", "cumin", "jeera", "masala"],
+}
+
 class ProductMatcher:
     def __init__(self, db: Session, store_id: str = "STORE001"):
         self.db = db
@@ -69,6 +96,35 @@ class ProductMatcher:
             if norm not in self.all_alias_strings:
                 self.all_alias_strings.append(norm)
 
+    def _find_generic_category_matches(self, clean_q: str) -> List[str]:
+        """Finds store products matching a vernacular/generic category keyword, sorted by available stock."""
+        target_keywords = None
+        for cat_key, kw_list in sorted(GENERIC_CATEGORY_MAP.items(), key=lambda x: len(x[0]), reverse=True):
+            if clean_q == cat_key or re.search(rf"\b{re.escape(cat_key)}\b", clean_q):
+                target_keywords = kw_list
+                break
+
+        if not target_keywords:
+            return []
+
+        matched_pids = set()
+        for pid, p in self.products.items():
+            p_name = p.name.lower()
+            p_brand = (p.brand or "").lower()
+            for kw in target_keywords:
+                # Use word-boundary regex so 'dal' does not match 'sandalwood' and 'oil' does not match 'coil'
+                if re.search(rf"\b{re.escape(kw)}\b", p_name) or (p_brand and re.search(rf"\b{re.escape(kw)}\b", p_brand)):
+                    matched_pids.add(pid)
+                    break
+
+        def get_stock(pid: str) -> Decimal:
+            prod = self.products.get(pid)
+            if prod and prod.inventory:
+                return prod.inventory.stock_quantity - prod.inventory.reserved_quantity
+            return Decimal(0)
+
+        return sorted(list(matched_pids), key=get_stock, reverse=True)
+
     def match_product(
         self,
         query_text: str,
@@ -90,6 +146,20 @@ class ProductMatcher:
         # -------------------------------------------------------------
         # STAGE 1: Exact Alias or Exact Canonical Match
         # -------------------------------------------------------------
+        if clean_q in ["sabun", "soap", "tel", "cooking oil", "oil", "biscuit", "biscuits", "namkeen", "dal", "daal", "chawal", "rice"]:
+            cat_matches = self._find_generic_category_matches(clean_q)
+            if len(cat_matches) > 1:
+                candidates = [self._build_candidate(pid, 1.0, clean_q, "generic_category", is_generic=True) for pid in cat_matches[:5]]
+                options = [f"{c.name} (₹{c.price_inr})" for c in candidates]
+                return ProductMatchResult(
+                    matched=False,
+                    is_ambiguous=True,
+                    candidates=candidates,
+                    clarification_type=ClarificationType.PRODUCT,
+                    clarification_options=options,
+                    reason=f"Ambiguous category '{query_text}' matches multiple store products."
+                )
+
         if clean_q in self.alias_to_products:
             prod_records = self.alias_to_products[clean_q]
             matched_prod_ids = list(set(r[0] for r in prod_records))
@@ -165,6 +235,30 @@ class ProductMatcher:
             else:
                 pid = matched_pids[0]
                 cand = self._build_candidate(pid, 0.95, longest_sub_match, "substring_alias")
+                return ProductMatchResult(
+                    matched=True,
+                    product=cand,
+                    candidates=[cand]
+                )
+
+        # -------------------------------------------------------------
+        # STAGE 2.5: Generic Category Disambiguation before Fuzzy Match
+        # -------------------------------------------------------------
+        cat_matches = self._find_generic_category_matches(clean_q)
+        if cat_matches:
+            if len(cat_matches) > 1:
+                candidates = [self._build_candidate(pid, 0.95, clean_q, "generic_category", is_generic=True) for pid in cat_matches[:5]]
+                options = [f"{c.name} (₹{c.price_inr})" for c in candidates]
+                return ProductMatchResult(
+                    matched=False,
+                    is_ambiguous=True,
+                    candidates=candidates,
+                    clarification_type=ClarificationType.PRODUCT,
+                    clarification_options=options,
+                    reason=f"Multiple varieties available for '{query_text}'."
+                )
+            else:
+                cand = self._build_candidate(cat_matches[0], 0.95, clean_q, "generic_category")
                 return ProductMatchResult(
                     matched=True,
                     product=cand,

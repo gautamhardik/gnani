@@ -89,6 +89,10 @@ class AssistantResponseGenerator:
         if state == DialogueState.ORDER_PLACED or act_name == "confirm_existing_cart":
             return f"Aapka order confirm ho gaya hai! Kul {total_spoken}. Dukaan-daar jaldi hi aapka samaan pack karenge. Dhanyawad!"
 
+        # 1.5 State: AWAITING_CONFIRMATION or action: awaiting_confirmation / read_back_and_ask
+        if state == DialogueState.AWAITING_CONFIRMATION or act_name in ["awaiting_confirmation", "read_back_and_ask"]:
+            return action.message or f"Aapka total bill {len(turn_response.cart)} items ke liye {total_spoken} hua. Kya order confirm kar dein?"
+
         # 2. State: CANCELLED
         if state == DialogueState.CANCELLED:
             return "Theek hai bhaiya, aapka order cancel kar diya gaya hai."
@@ -166,8 +170,8 @@ class AssistantResponseGenerator:
         if act_name == "add_items":
             if action.items:
                 items_str = cls._format_items_list(action.items)
-                return f"Ji bhaiya, {items_str} add kar diye hain. Total {total_spoken} hua. Kuch aur chahiye?"
-            return f"Ji bhaiya, item add kar diya hai. Total {total_spoken} hua. Kuch aur chahiye?"
+                return f"Ji bhaiya, {items_str} add kar diye hain. Total {total_spoken} hua. Aur kya chahiye bhaiya?"
+            return f"Ji bhaiya, item add kar diya hai. Total {total_spoken} hua. Aur kya chahiye bhaiya?"
 
         # Fallback to action message if present
         if action.message:

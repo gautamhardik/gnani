@@ -25,15 +25,30 @@ export interface VoiceRecordingResult {
 interface UseVoiceRecorderOptions {
   maxDurationSeconds?: number;
   onMaxDurationReached?: () => void;
+  autoVad?: boolean;
+  silenceMs?: number; // silence duration before auto-stop (default 1600ms)
+  speechThreshold?: number; // audio level threshold for speech onset (default 0.12)
+  silenceThreshold?: number; // audio level threshold for silence (default 0.08)
+  onSilenceAutoStop?: () => void;
+  noSpeechTimeoutMs?: number; // no speech timeout (default 7000ms)
+  onNoSpeechTimeout?: () => void;
 }
 
 export function useVoiceRecorder({
   maxDurationSeconds = 60,
   onMaxDurationReached,
+  autoVad = false,
+  silenceMs = 1600,
+  speechThreshold = 0.12,
+  silenceThreshold = 0.08,
+  onSilenceAutoStop,
+  noSpeechTimeoutMs = 7000,
+  onNoSpeechTimeout,
 }: UseVoiceRecorderOptions = {}) {
   const [status, setStatus] = useState<RecorderState>("ready");
   const [duration, setDuration] = useState<number>(0);
   const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [hasSpoken, setHasSpoken] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -44,6 +59,11 @@ export function useVoiceRecorder({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
+  const hasSpokenRef = useRef<boolean>(false);
+  const silenceStartRef = useRef<number | null>(null);
+  const recordStartRef = useRef<number>(0);
+  const noSpeechTriggeredRef = useRef<boolean>(false);
+  const autoStopTriggeredRef = useRef<boolean>(false);
 
   // Detect supported browser MIME types
   const getSupportedMimeType = useCallback((): string => {
@@ -84,6 +104,10 @@ export function useVoiceRecorder({
       audioContextRef.current = null;
     }
     setAudioLevel(0);
+    hasSpokenRef.current = false;
+    setHasSpoken(false);
+    silenceStartRef.current = null;
+    autoStopTriggeredRef.current = false;
   }, []);
 
   useEffect(() => {
@@ -92,7 +116,7 @@ export function useVoiceRecorder({
     };
   }, [cleanupTracksAndNodes]);
 
-  // Audio level visualizer loop
+  // Audio level visualizer loop and Auto-VAD monitor
   const startAudioAnalysis = (stream: MediaStream) => {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -125,6 +149,43 @@ export function useVoiceRecorder({
         const normalized = Math.min(1, avg / 128); // 0 to 1
         setAudioLevel(normalized);
 
+        // Auto-VAD State Machine
+        const now = Date.now();
+        if (autoVad && !autoStopTriggeredRef.current) {
+          if (!hasSpokenRef.current) {
+            // Monitor for onset of user speech
+            if (normalized >= speechThreshold) {
+              hasSpokenRef.current = true;
+              setHasSpoken(true);
+              silenceStartRef.current = null;
+            } else if (noSpeechTimeoutMs && now - recordStartRef.current >= noSpeechTimeoutMs) {
+              if (!noSpeechTriggeredRef.current) {
+                noSpeechTriggeredRef.current = true;
+                if (onNoSpeechTimeout) {
+                  onNoSpeechTimeout();
+                }
+              }
+            }
+          } else {
+            // User already started speaking; monitor for trailing silence
+            if (normalized < silenceThreshold) {
+              if (!silenceStartRef.current) {
+                silenceStartRef.current = now;
+              } else if (now - silenceStartRef.current >= silenceMs) {
+                // User finished speaking! Auto-stop recording
+                autoStopTriggeredRef.current = true;
+                if (onSilenceAutoStop) {
+                  onSilenceAutoStop();
+                }
+                return;
+              }
+            } else {
+              // Active speech resumed; reset trailing silence timer
+              silenceStartRef.current = null;
+            }
+          }
+        }
+
         animationFrameRef.current = requestAnimationFrame(tick);
       };
       tick();
@@ -137,6 +198,12 @@ export function useVoiceRecorder({
     setErrorMessage(null);
     audioChunksRef.current = [];
     setDuration(0);
+    hasSpokenRef.current = false;
+    setHasSpoken(false);
+    silenceStartRef.current = null;
+    noSpeechTriggeredRef.current = false;
+    autoStopTriggeredRef.current = false;
+    recordStartRef.current = Date.now();
 
     if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       setStatus("error");
@@ -270,6 +337,7 @@ export function useVoiceRecorder({
     isRecording: status === "recording",
     duration,
     audioLevel,
+    hasSpoken,
     errorMessage,
     startRecording,
     stopRecording,

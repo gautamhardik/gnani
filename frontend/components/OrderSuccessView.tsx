@@ -39,14 +39,14 @@ export function OrderSuccessView({ order, onNewOrder }: OrderSuccessViewProps) {
               <span className="font-medium text-dukaan-text">
                 {it.product_name_snapshot} ({it.quantity} {it.unit})
               </span>
-              <span className="font-bold text-dukaan-text">₹{Number(it.subtotal).toFixed(2)}</span>
+              <span className="font-bold text-dukaan-text">₹{Number(it.subtotal || 0).toFixed(2)}</span>
             </div>
           ))}
         </div>
         <div className="mt-3 pt-2.5 border-t border-dukaan-border flex items-center justify-between text-sm">
           <span className="font-semibold text-dukaan-text">Kul Rashi:</span>
           <span className="font-extrabold text-dukaan-primaryDark">
-            ₹{Number(order.total_amount).toFixed(2)}
+            ₹{Number(order.total_amount || 0).toFixed(2)}
           </span>
         </div>
       </div>

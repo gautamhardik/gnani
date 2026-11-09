@@ -66,9 +66,46 @@ class ConversationManager:
         # -------------------------------------------------------------
         if intent == IntentType.CONFIRM:
             total = cart.calculate_total()
+            items = cart.get_items()
+            if target_text == "request_bill":
+                if not items:
+                    msg = "Aapki cart abhi khali hai. Kuch samaan add kijiye."
+                    action = TurnAction(
+                        action="awaiting_confirmation",
+                        items=[],
+                        message=msg
+                    )
+                    return TurnResponse(
+                        session_id=session_id,
+                        intent=intent,
+                        state=DialogueState.COLLECTING,
+                        action=action,
+                        cart=[],
+                        total_amount=Decimal(0),
+                        spoken_response=msg
+                    )
+                else:
+                    item_count = len(items)
+                    msg = f"Aapka bill {item_count} items ke liye ₹{total} hua. Kya order confirm kar dein?"
+                    action = TurnAction(
+                        action="awaiting_confirmation",
+                        items=items,
+                        message=msg
+                    )
+                    return TurnResponse(
+                        session_id=session_id,
+                        intent=intent,
+                        state=DialogueState.AWAITING_CONFIRMATION,
+                        action=action,
+                        cart=items,
+                        total_amount=total,
+                        spoken_response=msg
+                    )
+
+            # Explicit confirmation (e.g. "Haan confirm kar do") -> ORDER_PLACED
             action = TurnAction(
                 action="confirm_existing_cart",
-                items=cart.get_items(),
+                items=items,
                 message=f"Aapka order confirm ho gaya hai. Total amount: ₹{total}."
             )
             return TurnResponse(
@@ -76,7 +113,7 @@ class ConversationManager:
                 intent=intent,
                 state=DialogueState.ORDER_PLACED,
                 action=action,
-                cart=cart.get_items(),
+                cart=items,
                 total_amount=total,
                 spoken_response=action.message
             )
@@ -267,6 +304,7 @@ class ConversationManager:
 
             if match_res.matched:
                 prod = match_res.product
+                self.session_contexts.setdefault(session_id, {})["pending_product_id"] = prod.product_id
                 qty_info = QuantityParser.parse_quantity_phrase(normalized.clean_text)
                 dummy_prod = self.inventory_service.get_product_details(prod.product_id)
                 sell_qty, sell_unit, _ = QuantityParser.resolve_package_quantity(dummy_prod, qty_info)
@@ -316,6 +354,7 @@ class ConversationManager:
 
             if match_res.matched:
                 prod = match_res.product
+                self.session_contexts.setdefault(session_id, {})["pending_product_id"] = prod.product_id
                 avail, stock, _ = self.inventory_service.check_availability(prod.product_id, Decimal(0))
                 action = TurnAction(
                     action="quote_stock",
@@ -430,7 +469,7 @@ class ConversationManager:
                 not match_res.is_ambiguous
                 and session_id in self.session_contexts
                 and self.session_contexts[session_id].get("pending_product_id")
-                and qty_info.raw_amount is not None
+                and (qty_info.raw_amount is not None or qty_info.rupee_amount is not None or any(w in clause.lower() for w in ["haan", "theek", "ok", "de do", "dena", "daal do", "yes"]))
             ):
                 pending_pid = self.session_contexts[session_id].pop("pending_product_id")
                 matched_candidate = self.matcher._build_candidate(pending_pid, 1.0, clause, "session_context")
@@ -468,6 +507,27 @@ class ConversationManager:
                     spoken_response=action.message
                 )
             prod = self.inventory_service.get_product_details(matched_candidate.product_id)
+
+            # Real Kirana missing-quantity check:
+            # If user made a single-clause bare product request without explicit quantity:
+            if len(clauses) == 1 and not qty_info.is_explicit and getattr(matched_candidate, "match_source", "") != "session_context":
+                self.session_contexts.setdefault(session_id, {})["pending_product_id"] = prod.product_id
+                rate_str = f"₹{prod.price_inr} प्रति {prod.sale_unit}"
+                ask_msg = f"Haan ji, {prod.name} uplabdh hai, {rate_str} hai. Aapko kitna chahiye?"
+                action = TurnAction(
+                    action="clarify_quantity",
+                    clarification_type=ClarificationType.QUANTITY,
+                    message=ask_msg
+                )
+                return TurnResponse(
+                    session_id=session_id,
+                    intent=intent,
+                    state=DialogueState.NEEDS_CLARIFICATION,
+                    action=action,
+                    cart=cart.get_items(),
+                    total_amount=cart.calculate_total(),
+                    spoken_response=ask_msg
+                )
 
             # Reconcile quantity with package specifications
             sell_qty, sell_unit, pkg_err = QuantityParser.resolve_package_quantity(prod, qty_info)
@@ -551,7 +611,7 @@ class ConversationManager:
 
         total_amount = cart.calculate_total()
         item_names = ", ".join([f"{it.quantity} {it.unit} {it.name}" for it in added_items])
-        spoken_reply = f"Ji, {item_names} add kar diye hain. Aapka total ₹{total_amount} hua."
+        spoken_reply = f"Ji, {item_names} add kar diye hain. Aapka total ₹{total_amount} hua. Aur kya chahiye bhaiya?"
 
         action = TurnAction(
             action=action_name,

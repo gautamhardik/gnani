@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Header } from "@/components/Header";
 import { StoreHomeView } from "@/components/StoreHomeView";
 import { VoiceOrderingView } from "@/components/VoiceOrderingView";
@@ -34,6 +34,24 @@ export default function DukaanSaathiApp() {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
+  const [isCallMode, setIsCallMode] = useState<boolean>(true);
+  const [callModeToast, setCallModeToast] = useState<string | null>(null);
+
+  const isCallModeRef = useRef<boolean>(true);
+  const isConfirmModalOpenRef = useRef<boolean>(false);
+  const isProcessingTurnRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    isCallModeRef.current = isCallMode;
+  }, [isCallMode]);
+
+  useEffect(() => {
+    isConfirmModalOpenRef.current = isConfirmModalOpen;
+  }, [isConfirmModalOpen]);
+
+  useEffect(() => {
+    isProcessingTurnRef.current = isProcessingTurn;
+  }, [isProcessingTurn]);
 
   const storeId = process.env.NEXT_PUBLIC_STORE_ID || "STORE001";
 
@@ -43,19 +61,36 @@ export default function DukaanSaathiApp() {
     autoplayBlocked,
     currentUrl: activeAudioUrl,
     playAudio,
+    stopAudio,
   } = useAudioPlayer();
 
-  // Voice Recording Hook
+  // Voice Recording Hook with Hands-Free Auto-VAD
   const {
     isRecording,
     duration,
     audioLevel,
+    hasSpoken,
     errorMessage: recorderError,
     startRecording,
     stopRecording,
     cancelRecording,
   } = useVoiceRecorder({
     maxDurationSeconds: 60,
+    autoVad: isCallMode,
+    silenceMs: 1600,
+    speechThreshold: 0.12,
+    silenceThreshold: 0.08,
+    onSilenceAutoStop: () => {
+      handleStopAndSendVoiceTurn();
+    },
+    noSpeechTimeoutMs: 7000,
+    onNoSpeechTimeout: () => {
+      if (isCallModeRef.current) {
+        setIsCallMode(false);
+        setCallModeToast("Silence detected — Call paused. Tap mic to resume.");
+        stopRecording();
+      }
+    },
     onMaxDurationReached: () => {
       handleStopAndSendVoiceTurn();
     },
@@ -148,10 +183,29 @@ export default function DukaanSaathiApp() {
         setCartTotal(Number(turnResponse.cart.total_amount || 0));
       }
 
-      // 4. Play assistant audio
+      // Check if order transitioned to AWAITING_CONFIRMATION
+      if (turnResponse.session_state === "AWAITING_CONFIRMATION") {
+        setIsConfirmModalOpen(true);
+      }
+
+      // 4. Play assistant audio with continuous turn-taking for hands-free Call Mode
       if (turnResponse.audio_url) {
         const fullUrl = getAudioPlaybackUrl(turnResponse.audio_url);
-        playAudio(fullUrl);
+        playAudio(fullUrl, () => {
+          if (isCallModeRef.current && !isConfirmModalOpenRef.current) {
+            setTimeout(() => {
+              if (isCallModeRef.current && !isProcessingTurnRef.current) {
+                startRecording();
+              }
+            }, 250);
+          }
+        });
+      } else if (isCallModeRef.current && !isConfirmModalOpenRef.current) {
+        setTimeout(() => {
+          if (isCallModeRef.current && !isProcessingTurnRef.current) {
+            startRecording();
+          }
+        }, 250);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -168,7 +222,27 @@ export default function DukaanSaathiApp() {
     } finally {
       setIsProcessingTurn(false);
     }
-  }, [sessionId, stopRecording, playAudio]);
+  }, [sessionId, stopRecording, playAudio, startRecording]);
+
+  // Handle Start Recording with Barge-in (stops TTS if speaking)
+  const handleStartRecording = useCallback(async () => {
+    if (isPlayingAudio) {
+      stopAudio();
+    }
+    setCallModeToast(null);
+    await startRecording();
+  }, [isPlayingAudio, stopAudio, startRecording]);
+
+  const handleToggleCallMode = useCallback(() => {
+    setIsCallMode((prev) => {
+      const next = !prev;
+      if (next && !isRecording && !isProcessingTurn) {
+        startRecording();
+      }
+      return next;
+    });
+    setCallModeToast(null);
+  }, [isRecording, isProcessingTurn, startRecording]);
 
   // Handle manual cart edits
   const handleUpdateCartQuantity = async (productId: string, quantity: number) => {
@@ -306,8 +380,13 @@ export default function DukaanSaathiApp() {
             isProcessing={isProcessingTurn}
             duration={duration}
             audioLevel={audioLevel}
+            hasSpoken={hasSpoken}
+            isCallMode={isCallMode}
+            onToggleCallMode={handleToggleCallMode}
+            callModeToast={callModeToast}
+            onDismissToast={() => setCallModeToast(null)}
             errorMessage={recorderError}
-            onStartRecording={startRecording}
+            onStartRecording={handleStartRecording}
             onStopRecording={handleStopAndSendVoiceTurn}
             onCancelRecording={cancelRecording}
             onPlayAudio={(url) => playAudio(url)}
