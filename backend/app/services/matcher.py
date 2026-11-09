@@ -96,7 +96,12 @@ class ProductMatcher:
 
             # Ambiguous brand-level milk query (TC020: "Ek Amul milk dena" -> clarify_size)
             if clean_q in ["amul milk", "amul doodh"]:
-                matched_prod_ids = ["PRD021", "PRD022"]
+                matched_prod_ids = [
+                    p.product_id for p in self.products.values()
+                    if p.brand and p.brand.lower() == "amul" and (
+                        (p.category and "dairy" in p.category.lower()) or "milk" in p.name.lower() or "taaza" in p.name.lower() or "gold" in p.name.lower()
+                    )
+                ]
 
             # Sub-check: Does this exact alias map to multiple distinct active SKUs?
             # e.g. "doodh" maps to PRD021 (Amul Taaza), PRD022 (Amul Gold), PRD023 (Mother Dairy)
@@ -137,7 +142,12 @@ class ProductMatcher:
 
         if longest_sub_match and len(longest_sub_match) >= 3:
             if longest_sub_match in ["amul milk", "amul doodh"]:
-                matched_pids = ["PRD021", "PRD022"]
+                matched_pids = [
+                    p.product_id for p in self.products.values()
+                    if p.brand and p.brand.lower() == "amul" and (
+                        (p.category and "dairy" in p.category.lower()) or "milk" in p.name.lower() or "taaza" in p.name.lower() or "gold" in p.name.lower()
+                    )
+                ]
             if len(matched_pids) > 1:
                 # Ambiguous sub-phrase match (e.g. "doodh" or "amul milk")
                 candidates = [self._build_candidate(pid, 0.95, longest_sub_match, "exact_alias", is_generic=True) for pid in matched_pids]
@@ -192,7 +202,7 @@ class ProductMatcher:
                         seen_pids.add(pid)
                         candidates.append(self._build_candidate(pid, score / 100.0, match_str, "fuzzy"))
 
-        if len(candidates) > 1 and top_score < 95.0:
+        if len(candidates) > 1 and top_score < 98.0:
             options = [f"{c.name} (₹{c.price_inr})" for c in candidates]
             return ProductMatchResult(
                 matched=False,

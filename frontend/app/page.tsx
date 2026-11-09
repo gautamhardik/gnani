@@ -33,6 +33,9 @@ export default function DukaanSaathiApp() {
   const [isProcessingTurn, setIsProcessingTurn] = useState<boolean>(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
+
+  const storeId = process.env.NEXT_PUBLIC_STORE_ID || "STORE001";
 
   // Audio Playback Hook
   const {
@@ -62,7 +65,7 @@ export default function DukaanSaathiApp() {
   useEffect(() => {
     async function init() {
       try {
-        const storeData = await getStore("STORE001");
+        const storeData = await getStore(storeId);
         setStore(storeData);
 
         // Resume existing session if saved in localStorage, else create
@@ -84,7 +87,7 @@ export default function DukaanSaathiApp() {
           }
         }
 
-        const newSess = await createSession("STORE001");
+        const newSess = await createSession(storeId);
         setSessionId(newSess.session_id);
         if (typeof window !== "undefined") {
           localStorage.setItem("dukaansaathi_session_id", newSess.session_id);
@@ -94,7 +97,7 @@ export default function DukaanSaathiApp() {
       }
     }
     init();
-  }, []);
+  }, [storeId]);
 
   // Handle Stop Recording & Upload Turn
   const handleStopAndSendVoiceTurn = useCallback(async () => {
@@ -184,18 +187,26 @@ export default function DukaanSaathiApp() {
 
   // Final Order Confirmation Submission
   const handleConfirmOrder = async () => {
-    if (!sessionId || cartItems.length === 0) return;
-    const itemsPayload = cartItems.map((it) => ({
-      product_id: it.product_id,
-      quantity: it.quantity,
-    }));
-    const order = await submitOrder(sessionId, "STORE001", itemsPayload);
-    setConfirmedOrder(order);
-    setIsConfirmModalOpen(false);
+    if (!sessionId || cartItems.length === 0 || isSubmittingOrder) return;
+    setIsSubmittingOrder(true);
+    try {
+      const itemsPayload = cartItems.map((it) => ({
+        product_id: it.product_id,
+        quantity: it.quantity,
+      }));
+      const order = await submitOrder(sessionId, storeId, itemsPayload);
+      setConfirmedOrder(order);
+      setIsConfirmModalOpen(false);
 
-    // Clear session from storage
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("dukaansaathi_session_id");
+      // Clear session from storage
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("dukaansaathi_session_id");
+      }
+    } catch (err: unknown) {
+      console.error("Order submission failed:", err);
+      throw err;
+    } finally {
+      setIsSubmittingOrder(false);
     }
   };
 
@@ -204,10 +215,14 @@ export default function DukaanSaathiApp() {
     setCartItems([]);
     setCartTotal(0);
     setMessages([]);
-    const newSess = await createSession("STORE001");
-    setSessionId(newSess.session_id);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("dukaansaathi_session_id", newSess.session_id);
+    try {
+      const newSess = await createSession(storeId);
+      setSessionId(newSess.session_id);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("dukaansaathi_session_id", newSess.session_id);
+      }
+    } catch (err) {
+      console.error("Start new order session creation failed:", err);
     }
     setActiveTab("voice");
   };
@@ -226,7 +241,7 @@ export default function DukaanSaathiApp() {
           body: JSON.stringify({
             utterance: option,
             session_id: sessionId,
-            store_id: "STORE001",
+            store_id: storeId,
           }),
         }
       );

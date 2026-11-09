@@ -100,6 +100,9 @@ export function useVoiceRecorder({
 
       const audioCtx = new AudioCtx();
       audioContextRef.current = audioCtx;
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume().catch(() => {});
+      }
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
       analyserRef.current = analyser;
@@ -150,6 +153,11 @@ export function useVoiceRecorder({
         },
       });
       streamRef.current = stream;
+      stream.getTracks().forEach((track) => {
+        track.onended = () => {
+          stopRecording();
+        };
+      });
 
       const mimeType = getSupportedMimeType();
       const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
@@ -177,6 +185,7 @@ export function useVoiceRecorder({
           if (onMaxDurationReached) {
             onMaxDurationReached();
           }
+          stopRecording();
         }
       }, 250);
 

@@ -26,6 +26,10 @@ class Settings(BaseSettings):
         default="sqlite:///./data/database/dukkaansaathi_seed.sqlite",
         description="Authoritative database connection string (PostgreSQL for production/Neon, SQLite for local dev)"
     )
+    DATABASE_POOL_SIZE: int = 15
+    DATABASE_MAX_OVERFLOW: int = 25
+    DATABASE_POOL_TIMEOUT: int = 30
+    DATABASE_POOL_RECYCLE: int = 1800
 
     # Demo Store
     DEMO_STORE_ID: str = "STORE001"

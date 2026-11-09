@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
@@ -132,12 +132,27 @@ def update_inventory_stock(
     product_id: str,
     update_in: InventoryUpdateRequest,
     db: Session = Depends(get_db),
-    _: bool = Depends(get_current_merchant)
+    current_merchant: Dict[str, Any] = Depends(get_current_merchant)
 ):
     """
     Updates product stock level and records an authoritative audit row in stock_movements (Merchant Protected).
+    Enforces atomic row locking with SELECT ... FOR UPDATE and validates store ownership.
     """
-    inv = db.query(StoreInventory).filter(StoreInventory.product_id == product_id).first()
+    prod = db.query(Product).filter(Product.product_id == product_id).first()
+    if not prod:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Product '{product_id}' not found"
+        )
+
+    merchant_store = current_merchant.get("store_id")
+    if merchant_store and merchant_store != prod.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Unauthorized: Cannot modify inventory for store '{prod.store_id}'"
+        )
+
+    inv = db.query(StoreInventory).filter(StoreInventory.product_id == product_id).with_for_update().first()
     if not inv:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

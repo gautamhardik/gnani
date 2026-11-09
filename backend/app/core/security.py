@@ -9,11 +9,31 @@ import hashlib
 import hmac
 import json
 import secrets
+import threading
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Set
 
 from fastapi import Header, HTTPException, status
 from backend.app.core.config import settings
+
+# Thread-safe server-side revocation set for invalidated session tokens
+_revoked_tokens: Set[str] = set()
+_revocation_lock = threading.Lock()
+
+
+def revoke_token(token: str) -> None:
+    """Adds a token to the server-side revocation list upon logout."""
+    if token:
+        with _revocation_lock:
+            _revoked_tokens.add(token)
+
+
+def is_token_revoked(token: str) -> bool:
+    """Checks if a session token has been revoked."""
+    if not token:
+        return True
+    with _revocation_lock:
+        return token in _revoked_tokens
 
 
 def _b64encode(data: bytes) -> str:
@@ -59,9 +79,11 @@ def create_merchant_session_token(
 
 def verify_merchant_session_token(token: str) -> Optional[Dict[str, Any]]:
     """
-    Verifies the cryptographic signature and expiration of a signed session token.
-    Returns the decoded payload dict if valid, or None if invalid/expired.
+    Verifies the cryptographic signature, revocation status, and expiration of a signed session token.
+    Returns the decoded payload dict if valid, or None if invalid/expired/revoked.
     """
+    if is_token_revoked(token):
+        return None
     try:
         parts = token.split(".")
         if len(parts) != 2:

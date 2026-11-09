@@ -73,3 +73,35 @@ def test_generic_milk_multiple_turns_preserves_cart(db_session):
     assert "PRD001" in pids
     assert "PRD022" in pids
 
+
+def test_single_item_negation_does_not_wipe_cart(db_session):
+    manager = ConversationManager(db_session)
+    # Turn 1: Add flour and maggi
+    res1 = manager.process_turn(
+        session_id="SESS_EDGE_05",
+        user_utterance="Ek kilo aata aur do packet Maggi de do."
+    )
+    assert len(res1.cart) == 2
+
+    # Turn 2: Customer decides they don't want Maggi
+    res2 = manager.process_turn(
+        session_id="SESS_EDGE_05",
+        user_utterance="Maggi nahi chahiye.",
+        existing_cart=[it.model_dump() for it in res1.cart]
+    )
+    assert res2.action.action == "remove_item"
+    assert len(res2.cart) == 1
+    assert res2.cart[0].product_id == "PRD001"
+    assert res2.state == DialogueState.COLLECTING
+
+
+def test_vernacular_sawa_quantity(db_session):
+    manager = ConversationManager(db_session)
+    res = manager.process_turn(
+        session_id="SESS_EDGE_06",
+        user_utterance="Sawa kilo chini de do."
+    )
+    assert res.action.action == "add_items"
+    assert len(res.cart) == 1
+    assert res.cart[0].quantity == Decimal("1.25")
+

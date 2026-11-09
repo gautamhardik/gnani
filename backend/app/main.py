@@ -46,6 +46,7 @@ async def security_headers_and_payload_middleware(request: Request, call_next):
     response: Response = await call_next(request)
 
     # Standard OWASP Defensive Security Headers
+    allowed_connect = " ".join(settings.ALLOWED_ORIGINS) if isinstance(settings.ALLOWED_ORIGINS, list) else str(settings.ALLOWED_ORIGINS)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
@@ -56,7 +57,7 @@ async def security_headers_and_payload_middleware(request: Request, call_next):
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
         "img-src 'self' data: https:; "
         "media-src 'self' blob: data:; "
-        "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:3000 http://127.0.0.1:3000; "
+        f"connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:3000 http://127.0.0.1:3000 https: {allowed_connect}; "
         "frame-ancestors 'none';"
     )
 

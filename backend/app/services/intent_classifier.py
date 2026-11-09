@@ -36,10 +36,10 @@ CONFIRM_PATTERNS = [
 ]
 
 CANCEL_PATTERNS = [
-    r"\bcancel\s+(kar\s+do|karo|order)\b",
-    r"\bnahi\s+chahiye\b",
-    r"\bsaara\s+hata\s+do\b",
-    r"\bpoora\s+cart\s+saaf\b",
+    r"^(order\s+)?cancel\s*(kar\s+do|karo|order)?$",
+    r"^(kuch\s+(bhi\s+)?)?nahi\s+chahiye$",
+    r"^(saara|poora)\s+(cart\s+)?(hata\s+do|saaf\s+kar\s+do|khali\s+kar\s+do)$",
+    r"^band\s+kar\s+do$"
 ]
 
 REMOVE_PATTERNS = [
@@ -47,6 +47,7 @@ REMOVE_PATTERNS = [
     r"\b(.*)\s+nikal\s+do\b",
     r"\bremove\s+(.*)\b",
     r"\bdelete\s+(.*)\b",
+    r"\b(.*)\s+(nahi\s+chahiye|mat\s+daalna|mat\s+do)\b",
 ]
 
 REPLACE_PATTERNS = [

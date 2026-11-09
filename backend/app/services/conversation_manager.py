@@ -106,8 +106,8 @@ class ConversationManager:
         # -------------------------------------------------------------
         if intent == IntentType.REMOVE:
             clean = normalized.clean_text
-            # Extract item name before "hata do" or "remove"
-            m = re.search(r"^(.*?)(?:\s+hata\s+do|\s+nikal\s+do|\s+remove|\s+delete)", clean)
+            # Extract item name before "hata do", "remove", "nahi chahiye", or "mat daalna"
+            m = re.search(r"^(.*?)(?:\s+hata\s+do|\s+nikal\s+do|\s+remove|\s+delete|\s+nahi\s+chahiye|\s+mat\s+daalna|\s+mat\s+do)", clean)
             item_phrase = m.group(1).strip() if m else (target_text or clean)
 
             match_res = self.matcher.match_product(item_phrase)

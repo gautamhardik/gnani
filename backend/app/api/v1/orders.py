@@ -44,6 +44,17 @@ def create_customer_order(
     """
     store_id = order_in.store_id or settings.DEMO_STORE_ID
 
+    # Idempotency check: Return existing pending order if session already confirmed and order created
+    if order_in.session_id:
+        existing_order = (
+            db.query(Order)
+            .options(joinedload(Order.items))
+            .filter(Order.session_id == order_in.session_id, Order.status == "pending")
+            .first()
+        )
+        if existing_order:
+            return existing_order
+
     if not order_in.items:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -321,7 +332,7 @@ def reject_order(
     Rejects a pending order with a specified reason.
     Since stock was not deducted during pending creation, no compensating inventory movement is required.
     """
-    order = db.query(Order).filter(Order.order_id == order_id).first()
+    order = db.query(Order).filter(Order.order_id == order_id).with_for_update().first()
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -368,8 +379,8 @@ def update_order_status(
     """
     order = (
         db.query(Order)
-        .options(joinedload(Order.items))
         .filter(Order.order_id == order_id)
+        .with_for_update()
         .first()
     )
     if not order:
@@ -402,8 +413,10 @@ def update_order_status(
         )
 
     # Compensating stock restoration if order was accepted and is now cancelled
+    # Locks items in sorted product_id order to prevent deadlock with concurrent acceptances
     if target_status == "cancelled" and current_status in ["accepted", "preparing", "ready"]:
-        for item in order.items:
+        sorted_items = sorted(order.items, key=lambda x: x.product_id)
+        for item in sorted_items:
             inv = db.query(StoreInventory).filter(StoreInventory.product_id == item.product_id).with_for_update().first()
             if inv:
                 inv.stock_quantity += item.quantity

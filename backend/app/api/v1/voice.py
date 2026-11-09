@@ -8,11 +8,13 @@ and Gnani Timbre TTS delivery.
 import base64
 import logging
 import re
+import threading
 import time
 import uuid
 from typing import Dict, Optional, Tuple
 from decimal import Decimal
 
+from starlette.concurrency import run_in_threadpool
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
@@ -39,8 +41,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/voice", tags=["Voice Pipeline"])
 
-# In-memory turn idempotency cache: (session_id, client_turn_id) -> VoiceTurnResponse
+# In-memory turn idempotency cache with thread safety: (session_id, client_turn_id) -> VoiceTurnResponse
 _idempotency_cache: Dict[Tuple[str, str], VoiceTurnResponse] = {}
+_idempotency_lock = threading.Lock()
 _MAX_IDEMPOTENCY_ITEMS = 1000
 
 
@@ -65,9 +68,9 @@ async def process_voice_turn(
     # 1. Idempotency Check (Task 5)
     if client_turn_id:
         cache_key = (session_id, client_turn_id)
-        if cache_key in _idempotency_cache:
-            cached = _idempotency_cache[cache_key]
-            # Return duplicate response
+        with _idempotency_lock:
+            cached = _idempotency_cache.get(cache_key)
+        if cached:
             dup_resp = cached.model_copy()
             dup_resp.is_duplicate = True
             return dup_resp
@@ -99,12 +102,12 @@ async def process_voice_turn(
             detail=str(val_err)
         )
 
-    # 3. Preprocessing & Inspection (Task 2)
+    # 3. Preprocessing & Inspection (Task 2) - Non-blocking threadpool execution
     preproc_t0 = time.time()
     try:
-        metadata = AudioService.inspect_audio(raw_audio_bytes, format_hint=detected_format)
+        metadata = await run_in_threadpool(AudioService.inspect_audio, raw_audio_bytes, detected_format)
         AudioService.validate_duration(metadata)
-        pcm_wav_bytes = AudioService.convert_to_pcm16_wav(raw_audio_bytes, original_format=detected_format)
+        pcm_wav_bytes = await run_in_threadpool(AudioService.convert_to_pcm16_wav, raw_audio_bytes, detected_format)
     except AudioValidationError as preproc_err:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -136,9 +139,9 @@ async def process_voice_turn(
         db.flush()
         existing_cart = []
 
-    # 5. Speech-to-Text: Gnani Prisma (Task 3)
+    # 5. Speech-to-Text: Gnani Prisma (Task 3) - Non-blocking threadpool execution
     stt_service = PrismaSTTService(force_mock=force_mock)
-    stt_res = stt_service.transcribe(pcm_wav_bytes, filename="turn.wav")
+    stt_res = await run_in_threadpool(stt_service.transcribe, pcm_wav_bytes, "turn.wav")
     stt_ms = stt_res.latency_ms
 
     if not stt_res.success:
@@ -219,10 +222,10 @@ async def process_voice_turn(
         cart_total = turn_response.total_amount
         session_state = turn_response.state
 
-    # 8. Text-to-Speech: Gnani Timbre (Task 7 & 9)
+    # 8. Text-to-Speech: Gnani Timbre (Task 7 & 9) - Non-blocking threadpool execution
     tts_service = TimbreTTSService(force_mock=force_mock)
     try:
-        tts_res = tts_service.synthesize(text=assistant_text)
+        tts_res = await run_in_threadpool(tts_service.synthesize, text=assistant_text)
         tts_ms = tts_res.latency_ms
         audio_status = "generated" if tts_res.success else "failed"
         audio_url = f"/api/v1/voice/audio/{tts_res.audio_id}" if tts_res.success else None
@@ -275,13 +278,14 @@ async def process_voice_turn(
         warning=warning_msg
     )
 
-    # Cache for idempotency
+    # Cache for idempotency with thread lock
     if client_turn_id:
-        if len(_idempotency_cache) >= _MAX_IDEMPOTENCY_ITEMS:
-            # Evict first 50 keys
-            for k in list(_idempotency_cache.keys())[:50]:
-                _idempotency_cache.pop(k, None)
-        _idempotency_cache[(session_id, client_turn_id)] = response_payload
+        with _idempotency_lock:
+            if len(_idempotency_cache) >= _MAX_IDEMPOTENCY_ITEMS:
+                # Evict first 50 keys
+                for k in list(_idempotency_cache.keys())[:50]:
+                    _idempotency_cache.pop(k, None)
+            _idempotency_cache[(session_id, client_turn_id)] = response_payload
 
     return response_payload
 

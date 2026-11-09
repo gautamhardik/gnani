@@ -11,6 +11,7 @@ or a shared Redis-backed token bucket to prevent fragmented quota guarantees.
 """
 
 import time
+import threading
 from collections import defaultdict
 from typing import Dict, List, Tuple
 from fastapi import HTTPException, Request, status
@@ -18,12 +19,13 @@ from fastapi import HTTPException, Request, status
 
 class SlidingWindowRateLimiter:
     """
-    Sliding window rate limiter tracking request timestamps per client IP key.
+    Thread-safe sliding window rate limiter tracking request timestamps per client IP key.
     """
 
     def __init__(self):
         # Maps (key, action) -> list of timestamp floats
         self._requests: Dict[Tuple[str, str], List[float]] = defaultdict(list)
+        self._lock = threading.Lock()
 
     def check_rate_limit(
         self,
@@ -41,23 +43,25 @@ class SlidingWindowRateLimiter:
         window_start = now - window_seconds
         cache_key = (key, action)
 
-        # Filter out timestamps outside the active sliding window
-        valid_timestamps = [t for t in self._requests[cache_key] if t > window_start]
-        self._requests[cache_key] = valid_timestamps
+        with self._lock:
+            # Filter out timestamps outside the active sliding window
+            valid_timestamps = [t for t in self._requests[cache_key] if t > window_start]
+            self._requests[cache_key] = valid_timestamps
 
-        if len(valid_timestamps) >= max_requests:
-            oldest = valid_timestamps[0]
-            retry_after = max(1, int(oldest + window_seconds - now))
-            return False, 0, retry_after
+            if len(valid_timestamps) >= max_requests:
+                oldest = valid_timestamps[0]
+                retry_after = max(1, int(oldest + window_seconds - now))
+                return False, 0, retry_after
 
-        # Record this request
-        self._requests[cache_key].append(now)
-        remaining = max_requests - len(self._requests[cache_key])
-        return True, remaining, 0
+            # Record this request
+            self._requests[cache_key].append(now)
+            remaining = max_requests - len(self._requests[cache_key])
+            return True, remaining, 0
 
     def reset(self):
         """Clears all tracked rate-limiting state (useful for tests)."""
-        self._requests.clear()
+        with self._lock:
+            self._requests.clear()
 
 
 limiter = SlidingWindowRateLimiter()
@@ -65,13 +69,22 @@ limiter = SlidingWindowRateLimiter()
 
 def get_client_ip(request: Request) -> str:
     """
-    Extracts the client IP from X-Forwarded-For (if behind trusted proxy) or client.host.
+    Extracts the verified client IP.
+    Only inspects X-Forwarded-For if the direct peer is a trusted reverse proxy
+    (localhost, Docker bridge network, or testclient). Otherwise, strictly returns direct peer IP
+    to prevent unverified IP spoofing and rate limit evasion.
     """
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        # Take the first (client) IP in the chain
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "127.0.0.1"
+    peer_ip = request.client.host if request.client else "127.0.0.1"
+    trusted_proxies = {"127.0.0.1", "::1", "localhost", "testclient"}
+
+    if peer_ip in trusted_proxies or peer_ip.startswith("172.") or peer_ip.startswith("10."):
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            client_ip = forwarded.split(",")[0].strip()
+            if client_ip:
+                return client_ip
+
+    return peer_ip
 
 
 def enforce_rate_limit(

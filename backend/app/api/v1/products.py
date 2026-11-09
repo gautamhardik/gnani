@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
@@ -236,10 +236,17 @@ def get_product(
 def create_product(
     product_in: ProductCreate,
     db: Session = Depends(get_db),
-    _: bool = Depends(get_current_merchant)
+    current_merchant: Dict[str, Any] = Depends(get_current_merchant)
 ):
     """Creates a new catalogue product and initializes its inventory (Merchant Protected)."""
     target_store_id = product_in.store_id or settings.DEMO_STORE_ID
+    merchant_store = current_merchant.get("store_id")
+    if merchant_store and merchant_store != target_store_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Unauthorized: Cannot create products for store '{target_store_id}'"
+        )
+
     store = db.query(Store).filter(Store.store_id == target_store_id).first()
     if not store:
         raise HTTPException(
@@ -312,7 +319,7 @@ def update_product(
     product_id: str,
     update_data: ProductUpdate,
     db: Session = Depends(get_db),
-    _: bool = Depends(get_current_merchant)
+    current_merchant: Dict[str, Any] = Depends(get_current_merchant)
 ):
     """Updates product attributes and prices (Merchant Protected)."""
     p = db.query(Product).filter(Product.product_id == product_id).first()
@@ -320,6 +327,13 @@ def update_product(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Product with ID '{product_id}' not found"
+        )
+
+    merchant_store = current_merchant.get("store_id")
+    if merchant_store and merchant_store != p.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Unauthorized: Cannot update product for store '{p.store_id}'"
         )
 
     for field, val in update_data.model_dump(exclude_unset=True).items():
@@ -334,7 +348,7 @@ def update_product(
 def deactivate_product(
     product_id: str,
     db: Session = Depends(get_db),
-    _: bool = Depends(get_current_merchant)
+    current_merchant: Dict[str, Any] = Depends(get_current_merchant)
 ):
     """Soft-deactivates product from customer ordering (Merchant Protected)."""
     p = db.query(Product).filter(Product.product_id == product_id).first()
@@ -342,6 +356,13 @@ def deactivate_product(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Product with ID '{product_id}' not found"
+        )
+
+    merchant_store = current_merchant.get("store_id")
+    if merchant_store and merchant_store != p.store_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Unauthorized: Cannot deactivate product for store '{p.store_id}'"
         )
 
     p.is_active = False

@@ -92,7 +92,7 @@ class PrismaSTTService:
                 headers=headers,
                 files=files,
                 data=data,
-                timeout=self.timeout_seconds
+                timeout=(3.0, float(self.timeout_seconds))
             )
             roundtrip_ms = (time.time() - start_time) * 1000
 

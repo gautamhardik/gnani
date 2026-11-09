@@ -92,6 +92,26 @@ def test_merchant_me_endpoint_unauthorized(client):
 
 
 def test_merchant_logout_endpoint(client, merchant_headers):
-    response = client.post("/api/v1/auth/logout", headers=merchant_headers)
-    assert response.status_code == 200
-    assert response.json()["logged_out"] is True
+    # Login to obtain a session token
+    login_resp = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": settings.MERCHANT_USERNAME,
+            "password": settings.MERCHANT_PASSWORD
+        }
+    )
+    token = login_resp.json()["access_token"]
+    auth_headers = {"Authorization": f"Bearer {token}"}
+
+    # Verify token works
+    me_resp = client.get("/api/v1/auth/me", headers=auth_headers)
+    assert me_resp.status_code == 200
+
+    # Logout with this token
+    logout_resp = client.post("/api/v1/auth/logout", headers=auth_headers)
+    assert logout_resp.status_code == 200
+    assert logout_resp.json()["logged_out"] is True
+
+    # Token must now be rejected on the server
+    me_after_logout = client.get("/api/v1/auth/me", headers=auth_headers)
+    assert me_after_logout.status_code == 401

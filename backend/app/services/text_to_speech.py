@@ -9,6 +9,7 @@ import io
 import json
 import logging
 import struct
+import threading
 import time
 import uuid
 import wave
@@ -31,8 +32,9 @@ class TTSResult(BaseModel):
 
 
 class TimbreTTSService:
-    # Class-level shared in-memory audio cache: audio_id -> (audio_bytes, timestamp)
+    # Class-level shared in-memory audio cache with thread safety
     _audio_cache: Dict[str, Tuple[bytes, float]] = {}
+    _cache_lock = threading.Lock()
     _MAX_CACHE_ITEMS = 500
 
     def __init__(
@@ -54,23 +56,25 @@ class TimbreTTSService:
     @classmethod
     def get_cached_audio(cls, audio_id: str) -> Optional[bytes]:
         """Retrieves cached synthesized audio bytes by audio_id."""
-        entry = cls._audio_cache.get(audio_id)
-        if entry:
-            return entry[0]
-        return None
+        with cls._cache_lock:
+            entry = cls._audio_cache.get(audio_id)
+            if entry:
+                return entry[0]
+            return None
 
     @classmethod
     def store_in_cache(cls, audio_bytes: bytes) -> str:
         """Stores audio bytes in the cache and returns a unique audio_id."""
-        if len(cls._audio_cache) >= cls._MAX_CACHE_ITEMS:
-            # Evict oldest 50 items
-            sorted_keys = sorted(cls._audio_cache.keys(), key=lambda k: cls._audio_cache[k][1])
-            for k in sorted_keys[:50]:
-                cls._audio_cache.pop(k, None)
+        with cls._cache_lock:
+            if len(cls._audio_cache) >= cls._MAX_CACHE_ITEMS:
+                # Evict oldest 50 items
+                sorted_keys = sorted(cls._audio_cache.keys(), key=lambda k: cls._audio_cache[k][1])
+                for k in sorted_keys[:50]:
+                    cls._audio_cache.pop(k, None)
 
-        audio_id = f"aud_{uuid.uuid4().hex[:12]}"
-        cls._audio_cache[audio_id] = (audio_bytes, time.time())
-        return audio_id
+            audio_id = f"aud_{uuid.uuid4().hex[:12]}"
+            cls._audio_cache[audio_id] = (audio_bytes, time.time())
+            return audio_id
 
     def synthesize(
         self,
@@ -146,7 +150,7 @@ class TimbreTTSService:
                 self.endpoint_url,
                 headers=headers,
                 data=json.dumps(payload),
-                timeout=self.timeout_seconds
+                timeout=(3.0, float(self.timeout_seconds))
             )
             roundtrip_ms = (time.time() - start_time) * 1000
 

@@ -41,7 +41,14 @@ def get_engine():
 
     # For PostgreSQL, verify if connection succeeds; in staging/production, fail loudly
     try:
-        eng = create_engine(url, pool_pre_ping=True)
+        eng = create_engine(
+            url,
+            pool_pre_ping=True,
+            pool_size=settings.DATABASE_POOL_SIZE,
+            max_overflow=settings.DATABASE_MAX_OVERFLOW,
+            pool_timeout=settings.DATABASE_POOL_TIMEOUT,
+            pool_recycle=settings.DATABASE_POOL_RECYCLE,
+        )
         with eng.connect() as conn:
             pass
         return eng

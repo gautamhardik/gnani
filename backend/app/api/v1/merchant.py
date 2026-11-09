@@ -51,13 +51,14 @@ def get_merchant_overview(
         .count()
     )
 
-    # 2. Today's orders (IST / UTC start of day)
-    now_utc = datetime.now(timezone.utc)
-    # Start of today (UTC minus 24 hours window or midnight)
-    midnight_utc = datetime(now_utc.year, now_utc.month, now_utc.day, tzinfo=timezone.utc)
+    # 2. Today's orders (Aligned to Indian Standard Time / IST start of business day)
+    ist_tz = timezone(timedelta(hours=5, minutes=30))
+    now_ist = datetime.now(ist_tz)
+    midnight_ist = datetime(now_ist.year, now_ist.month, now_ist.day, tzinfo=ist_tz)
+    midnight_query = midnight_ist.astimezone(timezone.utc)
     today_orders_count = (
         db.query(Order)
-        .filter(Order.store_id == store_id, Order.created_at >= midnight_utc)
+        .filter(Order.store_id == store_id, Order.created_at >= midnight_query)
         .count()
     )
 
@@ -124,6 +125,6 @@ def get_merchant_overview(
         out_of_stock_count=out_of_stock_count,
         total_products_count=total_products_count,
         recent_orders=recent_orders,
-        generated_at=now_utc
+        generated_at=datetime.now(timezone.utc)
     )
 
