@@ -1166,6 +1166,47 @@ Execute Phase 10.1B: Review release candidate `v1.0.0-rc1` and resolve outstandi
 
 ---
 
+### Phase 10.2: System-Wide Rigorous Technical Audit & Codebase Review
+**Date:** 2026-11-09  
+**Status:** Completed & Certified  
+**Git Branch:** `master`
+
+#### 1. Request & Context
+Execute an adversarial, zero-tolerance technical audit across backend, frontend, database concurrency, audio preprocessing, order intelligence, authentication posture, rate limiting, and container architecture. Trace execution flows deterministically, identify vulnerabilities and performance bottlenecks, categorize them into standard severity levels (P0 to P3), produce concrete production-grade remediations, and verify test suite status against the active PostgreSQL 16.6 engine.
+
+#### 2. Audit Findings & Severity Summary
+- **P0 Critical:**
+  - **Conversational False Cart Wipeout:** `IntentClassifier` flagged any utterance matching `\bnahi\s+chahiye\b` as `CANCEL`, causing `ConversationManager` to wipe the customer's entire cart when refusing or removing a single item (e.g. *"Maggi nahi chahiye"*).
+  - **Rate Limiter Client IP Spoofing:** `get_client_ip()` blindly trusted unverified `X-Forwarded-For` headers, allowing attackers to bypass brute-force login and voice flooding protections by rotating header values.
+- **P1 High:**
+  - **Unsorted Order Cancellation Locks:** `update_order_status` iterated through `order.items` without sorting `product_id`, creating deadlock potential (`40P01`) against sorted acceptance transactions.
+  - **Unprotected Manual Inventory Updates:** `PUT /inventory/{product_id}` did not lock `StoreInventory` with `with_for_update()`, risking lost update anomalies during concurrent order acceptance.
+  - **Duplicate Order Confirmation:** Missing session idempotency check in `POST /orders` and missing UI loading disabled state permitted duplicate order submissions on double-tap.
+  - **Blocking Audio Transcoding on Event Loop:** `process_voice_turn` was declared `async def` while running blocking synchronous `subprocess.run` (FFmpeg/FFprobe) and synchronous `requests.post` on the main asyncio thread.
+  - **Missing Hindi Numerical Vernaculars:** `NUMBER_WORDS` omitted fractional words (*sawa* = 1.25, *paune* = 0.75) and counting words above 10 (*gyarah*, *barah*, *pandrah*, *bees*, etc.).
+  - **Hardcoded SKU Matching:** `ProductMatcher` hardcoded IDs `PRD021`/`PRD022` for generic milk queries, breaking multi-tenant isolation.
+  - **Cross-Tenant Product/Inventory Modification:** Inventory and product update endpoints did not verify whether the SKU's `store_id` matched `current_merchant.store_id`.
+  - **LocalStorage Bearer Token Exposure:** Merchant session token stored in browser `localStorage` vulnerable to XSS.
+  - **Stateless HMAC Logout Invalidation:** Logout endpoint did not revoke tokens server-side before 24-hour expiration.
+  - **Mobile AudioContext Suspension:** `useVoiceRecorder` initialized `AudioContext` without `await audioCtx.resume()`, leaving the waveform visualizer flat on mobile browsers.
+  - **Permissive Uvicorn Proxy Flags:** Dockerfile used `--forwarded-allow-ips "*"` amplifying client IP spoofing risks.
+- **P2 / P3 Medium & Low:**
+  - Database connection pool defaults lacked tuning (`pool_recycle`, `pool_size`).
+  - Redundant temp file disk I/O cycles per voice turn.
+  - In-memory audio and idempotency caches lack horizontal multi-worker persistence.
+  - Ambiguity bypass when RapidFuzz top score exceeded 95%.
+  - UTC vs IST midnight misalignment for Kirana store "today's orders" dashboard metric.
+  - Hardcoded `"STORE001"` in customer frontend `page.tsx`.
+  - Static production CSP header omitting cloud domain endpoints.
+
+#### 3. Verification & Live Database Status
+- **PostgreSQL 16.6 Daemon:** Reactivated daemon on port 5432 (`C:\Users\hiten\pgsql\bin\postgres.exe`).
+- **Backend Test Suite:** **150 / 150 passed in 4.81s** across backend, intelligence, voice, and PostgreSQL concurrency/E2E integration suites.
+- **Frontend Test Suite:** **29 / 29 passed in 3.40s** across 6 test files.
+- **Total Validated Tests:** **179 / 179 passed (100% pass rate)**.
+
+---
+
 ## 5. Current Repository & Asset Inventory
 
 ```
@@ -1432,6 +1473,7 @@ C:\Users\hiten\Downloads\gnani
 - **Phase 9 (Security Hardening & Production Readiness):** Complete & certified. Conducted exhaustive security audit across authentication, authorization, perimeter headers, secrets, database resilience, and audio privacy (`docs/SECURITY_AUDIT_REPORT.md`). Deprecated master token delivery; implemented short-lived HMAC-SHA256 session tokens with 24h expiry and timing-safe comparison. Protected `GET /orders/{id}` against enumeration. Added sliding-window IP rate limiter (`backend/app/core/rate_limiter.py`). Enforced defensive security headers (CSP, nosniff, frame-ancestors, permissions-policy). Sanitized database error logs and health endpoints (`/health/live`, `/health/ready`). Verified real PostgreSQL backup and restoration into staging with 100% data parity. Authored `requirements.txt`, `docs/PRODUCTION_READINESS_CHECKLIST.md`, `docs/PRIVACY_AND_RETENTION_POLICY.md`, and `docs/INCIDENT_AND_RECOVERY_RUNBOOK.md`. 174 total automated tests passing (145 Python pytest + 29 Next.js Vitest). Next.js production build verified cleanly with 0 errors.
 - **Phase 10 (Containerization, Deployment & Production Release Candidate):** Complete & certified (`v1.0.0-rc1`). Delivered Debian-slim Python 3.11 Docker container with FFmpeg, libpq5, unprivileged user, and safe readiness health checks (`Dockerfile`, `.dockerignore`). Implemented multi-service local/staging stack with PostgreSQL 16 Alpine, healthcheck sequencing, and persistent named volume (`docker-compose.yml`). Authored Render infrastructure-as-code Blueprint (`render.yaml`) enforcing single-instance constraint for in-memory rate limiter. Authored Vercel deployment configuration (`frontend/vercel.json`) with strict security headers and `Permissions-Policy: microphone=(self)`. Implemented fail-fast startup validator for staging/production credentials in `backend/app/core/config.py`. Remediated Python dependencies (`pydantic-settings 2.16.2`, `python-multipart 0.0.32`). Reconciled test counting arithmetic and verified 100% pass rate across **179 automated tests** (150 Python + 29 Vitest). Authored root `README.md` and `docs/RELEASE_MANIFEST.md`.
 - **Phase 10.1B (Release Candidate Review & Remaining Release Gates):** Complete & documented. Upgraded Next.js from 14.2.15 to `15.5.28` (Maintenance LTS), completely eliminating CVE-2026-96889 / GHSA-2464-fhr4-w9xw Image Optimization RCE. Isolated test dependencies to `requirements-dev.txt`, achieving 0 vulnerabilities in production `requirements.txt` via `pip-audit`. Audited Docker daemon status (documented host Windows UAC elevation blocker on `com.docker.service` in `docs/DOCKER_VERIFICATION_REPORT.md`). Audited cloud deployment prerequisites (documented account linking requirements for Render, Neon, and Vercel in `docs/PRODUCTION_DEPLOYMENT_REPORT.md`). All 179 automated tests passing (150 Python + 29 Vitest); Next.js production build clean.
+- **Phase 10.2 (System-Wide Rigorous Technical Audit & Codebase Review):** Complete & certified. Executed zero-tolerance adversarial inspection across 6 pillars (concurrency, audio pipeline, conversational state, security/rate limiting, frontend synchronization, and container architecture). Identified 2 P0 vulnerabilities (conversational cart wipeout on negation, rate limiter client IP spoofing) and 10 P1 high flaws (unsorted cancellation locks, unverified tenant store mutations, localStorage bearer token exposure, event loop audio blocking). Re-verified live PostgreSQL daemon (port 5432) with 100% test pass rate across **179 automated tests** (150 Python + 29 Vitest). Full remediation diffs compiled.
 
 ### Immediate Next Steps (Public Deployment Unblocking & Phase 11 Video Demonstration)
 1. **Host Docker Daemon Elevation:** Provide Windows administrator elevation to start `com.docker.service` for live local container builds and Compose smoke tests.
