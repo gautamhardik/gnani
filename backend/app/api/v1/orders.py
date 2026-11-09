@@ -44,12 +44,22 @@ def create_customer_order(
     """
     store_id = order_in.store_id or settings.DEMO_STORE_ID
 
-    # Idempotency check: Return existing pending order if session already confirmed and order created
+    # Idempotency check: Lock session row and return existing order if session already submitted
+    session_record = None
     if order_in.session_id:
+        session_record = (
+            db.query(OrderSession)
+            .filter(OrderSession.session_id == order_in.session_id)
+            .with_for_update()
+            .first()
+        )
         existing_order = (
             db.query(Order)
             .options(joinedload(Order.items))
-            .filter(Order.session_id == order_in.session_id, Order.status == "pending")
+            .filter(
+                Order.session_id == order_in.session_id,
+                Order.status.in_(["pending", "accepted", "preparing", "ready", "completed"])
+            )
             .first()
         )
         if existing_order:
@@ -135,7 +145,9 @@ def create_customer_order(
         created_items.append(order_item)
 
     # Mark session as confirmed if provided
-    if order_in.session_id:
+    if session_record:
+        session_record.status = "confirmed"
+    elif order_in.session_id:
         sess = db.query(OrderSession).filter(OrderSession.session_id == order_in.session_id).first()
         if sess:
             sess.status = "confirmed"

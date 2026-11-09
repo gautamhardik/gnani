@@ -98,3 +98,28 @@ def test_convert_stereo_44k_to_pcm16_mono():
         assert wf.getnchannels() == 1
         assert wf.getframerate() == 16000
         assert wf.getsampwidth() == 2
+
+
+def test_in_memory_webm_pipe_transcoding_and_duration():
+    """Streaming browser WebM/Opus audio must be transcoded via in-memory pipe with accurate duration."""
+    import subprocess
+    proc = subprocess.run(
+        ["ffmpeg", "-y", "-f", "lavfi", "-i", "sine=frequency=1000:duration=1.2", "-f", "webm", "-c:a", "libopus", "pipe:1"],
+        capture_output=True
+    )
+    if proc.returncode != 0:
+        pytest.skip("FFmpeg not available to generate test WebM")
+
+    webm_bytes = proc.stdout
+    meta = AudioService.inspect_audio(webm_bytes, format_hint="webm")
+    assert meta.duration_seconds >= 1.0
+    AudioService.validate_duration(meta)
+
+    pcm_wav = AudioService.convert_to_pcm16_wav(webm_bytes, original_format="webm")
+    assert pcm_wav.startswith(b"RIFF")
+    with wave.open(io.BytesIO(pcm_wav), "rb") as wf:
+        assert wf.getnchannels() == 1
+        assert wf.getframerate() == 16000
+        assert wf.getsampwidth() == 2
+        dur = wf.getnframes() / float(wf.getframerate())
+        assert dur == pytest.approx(1.2, rel=0.1)

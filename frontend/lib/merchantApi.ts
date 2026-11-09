@@ -38,18 +38,32 @@ export class MerchantApiError extends Error {
 
 export function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+  try {
+    return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export function setStoredToken(token: string): void {
   if (typeof window !== "undefined") {
-    localStorage.setItem(TOKEN_KEY, token);
+    try {
+      sessionStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(TOKEN_KEY, token);
+    } catch {
+      // storage unavailable
+    }
   }
 }
 
 export function clearStoredToken(): void {
   if (typeof window !== "undefined") {
-    localStorage.removeItem(TOKEN_KEY);
+    try {
+      sessionStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(TOKEN_KEY);
+    } catch {
+      // storage unavailable
+    }
   }
 }
 
@@ -94,6 +108,7 @@ export async function loginMerchant(
   const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(credentials),
   });
   const data = await handleResponse<MerchantLoginResponse>(res);
@@ -110,6 +125,7 @@ export async function getMerchantMe(): Promise<MerchantMeResponse> {
   const res = await fetch(`${API_BASE_URL}/api/v1/auth/me`, {
     method: "GET",
     headers: getAuthHeaders(),
+    credentials: "include",
   });
   return handleResponse<MerchantMeResponse>(res);
 }
@@ -122,6 +138,7 @@ export async function logoutMerchant(): Promise<void> {
     await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
       method: "POST",
       headers: getAuthHeaders(),
+      credentials: "include",
     });
   } catch {
     // Ignore network failure on logout
@@ -137,6 +154,7 @@ export async function getMerchantOverview(): Promise<MerchantOverviewResponse> {
   const res = await fetch(`${API_BASE_URL}/api/v1/merchant/overview`, {
     method: "GET",
     headers: getAuthHeaders(),
+    credentials: "include",
   });
   return handleResponse<MerchantOverviewResponse>(res);
 }
@@ -160,6 +178,7 @@ export async function listOrders(
   const res = await fetch(`${API_BASE_URL}/api/v1/orders?${params.toString()}`, {
     method: "GET",
     headers: getAuthHeaders(),
+    credentials: "include",
   });
   return handleResponse<PaginatedResponse<Order>>(res);
 }
@@ -171,6 +190,7 @@ export async function getOrder(orderId: string): Promise<Order> {
   const res = await fetch(`${API_BASE_URL}/api/v1/orders/${orderId}`, {
     method: "GET",
     headers: getAuthHeaders(),
+    credentials: "include",
   });
   return handleResponse<Order>(res);
 }
@@ -182,6 +202,7 @@ export async function acceptOrder(orderId: string): Promise<Order> {
   const res = await fetch(`${API_BASE_URL}/api/v1/orders/${orderId}/accept`, {
     method: "POST",
     headers: getAuthHeaders(),
+    credentials: "include",
   });
   return handleResponse<Order>(res);
 }
@@ -196,6 +217,7 @@ export async function rejectOrder(
   const res = await fetch(`${API_BASE_URL}/api/v1/orders/${orderId}/reject`, {
     method: "POST",
     headers: getAuthHeaders(),
+    credentials: "include",
     body: JSON.stringify({ reason }),
   });
   return handleResponse<Order>(res);
@@ -212,6 +234,7 @@ export async function updateOrderStatus(
   const res = await fetch(`${API_BASE_URL}/api/v1/orders/${orderId}/status`, {
     method: "POST",
     headers: getAuthHeaders(),
+    credentials: "include",
     body: JSON.stringify({ status: targetStatus, notes }),
   });
   return handleResponse<Order>(res);
@@ -236,6 +259,7 @@ export async function listInventory(
   const res = await fetch(`${API_BASE_URL}/api/v1/inventory?${params.toString()}`, {
     method: "GET",
     headers: getAuthHeaders(),
+    credentials: "include",
   });
   return handleResponse<PaginatedResponse<InventoryItem>>(res);
 }
@@ -250,6 +274,7 @@ export async function updateInventoryStock(
   const res = await fetch(`${API_BASE_URL}/api/v1/inventory/${productId}`, {
     method: "PUT",
     headers: getAuthHeaders(),
+    credentials: "include",
     body: JSON.stringify(update),
   });
   return handleResponse<InventoryItem>(res);
@@ -271,6 +296,7 @@ export async function listProducts(
   const res = await fetch(url, {
     method: "GET",
     headers: getAuthHeaders(),
+    credentials: "include",
   });
   return handleResponse<PaginatedResponse<Product>>(res);
 }
@@ -284,6 +310,7 @@ export async function createProduct(
   const res = await fetch(`${API_BASE_URL}/api/v1/products`, {
     method: "POST",
     headers: getAuthHeaders(),
+    credentials: "include",
     body: JSON.stringify(productData),
   });
   return handleResponse<Product>(res);
@@ -299,6 +326,7 @@ export async function updateProduct(
   const res = await fetch(`${API_BASE_URL}/api/v1/products/${productId}`, {
     method: "PUT",
     headers: getAuthHeaders(),
+    credentials: "include",
     body: JSON.stringify(productData),
   });
   return handleResponse<Product>(res);
@@ -321,6 +349,7 @@ export async function listStockMovements(
   const res = await fetch(`${API_BASE_URL}/api/v1/inventory/movements?${params.toString()}`, {
     method: "GET",
     headers: getAuthHeaders(),
+    credentials: "include",
   });
   return handleResponse<PaginatedResponse<StockMovement>>(res);
 }

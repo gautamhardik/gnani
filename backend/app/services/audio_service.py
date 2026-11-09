@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import shutil
+import struct
 import subprocess
 import tempfile
 import wave
@@ -137,8 +138,52 @@ class AudioService:
                 # Fallback to ffprobe if wave module cannot parse (e.g. non-standard WAV chunk)
                 pass
 
-        # Robust path: ffprobe
+        # Robust path: ffprobe (attempt in-memory pipe:0 first to eliminate disk I/O churn)
         ffprobe_bin = shutil.which("ffprobe") or "ffprobe"
+        try:
+            cmd = [
+                ffprobe_bin,
+                "-v", "quiet",
+                "-print_format", "json",
+                "-show_format",
+                "-show_streams",
+                "pipe:0"
+            ]
+            res = subprocess.run(cmd, input=file_bytes, capture_output=True, timeout=10)
+            if res.returncode == 0 and res.stdout:
+                info = json.loads(res.stdout.decode("utf-8", errors="replace"))
+                fmt_info = info.get("format", {})
+                streams = info.get("streams", [])
+                audio_stream = next((s for s in streams if s.get("codec_type") == "audio"), {})
+
+                duration = float(fmt_info.get("duration", audio_stream.get("duration", 0.0)))
+                sample_rate = int(audio_stream.get("sample_rate", 16000))
+                channels = int(audio_stream.get("channels", 1))
+
+                # Guard against streamed containers (e.g. browser WebM/Opus) where container header omits duration tag
+                if duration <= 0.0 and format_hint != "wav":
+                    try:
+                        wav_pcm = AudioService.convert_to_pcm16_wav(file_bytes, format_hint)
+                        if len(wav_pcm) > 44:
+                            duration = (len(wav_pcm) - 44) / 32000.0  # 16000 Hz * 1 channel * 2 bytes
+                    except Exception:
+                        pass
+
+                return AudioMetadata(
+                    format=format_hint,
+                    duration_seconds=round(duration, 3),
+                    sample_rate=sample_rate,
+                    channels=channels,
+                    bit_depth=None,
+                    file_size_bytes=len(file_bytes)
+                )
+        except subprocess.TimeoutExpired:
+            raise AudioValidationError("Audio metadata inspection timed out.")
+        except Exception:
+            # Fall back to disk temp file if container requires seekability
+            pass
+
+        # Fallback disk path
         with tempfile.NamedTemporaryFile(suffix=f".{format_hint}", delete=False) as tmp:
             tmp_path = tmp.name
             tmp.write(file_bytes)
@@ -164,6 +209,14 @@ class AudioService:
             duration = float(fmt_info.get("duration", audio_stream.get("duration", 0.0)))
             sample_rate = int(audio_stream.get("sample_rate", 16000))
             channels = int(audio_stream.get("channels", 1))
+
+            if duration <= 0.0 and format_hint != "wav":
+                try:
+                    wav_pcm = AudioService.convert_to_pcm16_wav(file_bytes, format_hint)
+                    if len(wav_pcm) > 44:
+                        duration = (len(wav_pcm) - 44) / 32000.0
+                except Exception:
+                    pass
 
             return AudioMetadata(
                 format=format_hint,
@@ -219,8 +272,37 @@ class AudioService:
             except Exception:
                 pass
 
-        # FFmpeg transcode path
+        # In-memory FFmpeg pipe conversion (pipe:0 -> pipe:1) to eliminate disk churn
         ffmpeg_bin = shutil.which("ffmpeg") or "ffmpeg"
+        try:
+            cmd = [
+                ffmpeg_bin,
+                "-y",
+                "-i", "pipe:0",
+                "-vn",
+                "-ac", "1",
+                "-ar", "16000",
+                "-c:a", "pcm_s16le",
+                "-f", "wav",
+                "pipe:1"
+            ]
+            proc = subprocess.run(cmd, input=file_bytes, capture_output=True, timeout=15)
+            if proc.returncode == 0 and proc.stdout and proc.stdout.startswith(b"RIFF"):
+                out_bytes = bytearray(proc.stdout)
+                # Streaming stdout in FFmpeg writes sentinel 0xFFFFFFFF for chunk sizes.
+                # Patch exact RIFF and data chunk sizes to make the WAV 100% compliant.
+                data_pos = out_bytes.find(b"data")
+                if data_pos != -1 and len(out_bytes) >= data_pos + 8:
+                    struct.pack_into("<I", out_bytes, 4, len(out_bytes) - 8)
+                    struct.pack_into("<I", out_bytes, data_pos + 4, len(out_bytes) - (data_pos + 8))
+                return bytes(out_bytes)
+        except subprocess.TimeoutExpired:
+            raise AudioValidationError("Audio conversion timed out.")
+        except Exception:
+            # Fall back to disk temp file if stream is not pipeable
+            pass
+
+        # Fallback disk path for non-pipeable media
         with tempfile.NamedTemporaryFile(suffix=f".{original_format}", delete=False) as in_tmp:
             in_path = in_tmp.name
             in_tmp.write(file_bytes)
