@@ -259,8 +259,8 @@ AI & Cloud Infrastructure:
 
 ```bash
 # Clone the repository
-git clone https://github.com/gautamhardik/Jinani.git
-cd Jinani
+git clone https://github.com/gautamhardik/gnani.git
+cd gnani
 
 # Launch the complete multi-service stack (FastAPI + PostgreSQL)
 docker compose up --build

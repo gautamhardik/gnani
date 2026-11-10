@@ -2003,12 +2003,12 @@ C:\Users\hiten\Downloads\gnani
   - Voice test suite passed: `tests/voice/test_speech_to_text.py` and `tests/voice/test_voice_api.py` (9/9 passed).
   - FastAPI backend restarted on `http://127.0.0.1:8000` with `/health` returning `200 healthy`.
 
-### Verification Milestone 24: Master Showcase Solution Pitch README & GitHub Deployment (Jinani) (2026-11-10)
+### Verification Milestone 24: Master Showcase Solution Pitch README & GitHub Deployment (gnani) (2026-11-10)
 
 - **Request / Task:**
   1. Author a compelling 10/10 master `README.md` incorporating an executive solution pitch (under 1 page) positioned for maximum evaluation weightage in the Great Indian AI Internship Challenge.
   2. Ensure comprehensive technical exposition: 7-stage deterministic order intelligence pipeline, Gnani AI Prisma STT & Timbre TTS voice architecture, Indic Soundex phonetic recovery, two-phase zero-deduction transactional fulfillment, performance metrics (154/154 backend + 29/29 frontend tests passed), and multi-turn dialogue verification.
-  3. Push all important repository files to GitHub under the repository name `Jinani`.
+  3. Push all important repository files to GitHub under the repository name `gnani`.
 - **Key Actions Performed:**
   1. **Master README Synthesis ([README.md](file:///c:/Users/hiten/Downloads/gnani/README.md)):**
      - Crafted an Executive Solution Pitch directly in the README covering the Indian retail crisis (12M kirana dukaans handling 88%+ of grocery trade), the vernacular voice solution, and a head-to-head architectural comparison against conventional LLM chatbots.
@@ -2016,13 +2016,13 @@ C:\Users\hiten\Downloads\gnani
      - Included 4 verified real-world conversational dialogues showcasing handled edge cases (vernacular multi-item, out-of-stock boundary prompts, generic category disambiguation, and cross-item substitution).
      - Added quickstart guides (Docker Compose and manual local dev), test verification commands, security hardening details, and demo credentials.
   2. **Git Repository Configuration & Push:**
-     - Created and initialized public GitHub repository `gautamhardik/Jinani`.
+     - Created and initialized public GitHub repository `gautamhardik/gnani`.
      - Staged all source files, models, services, frontends, tests, and configuration schemas while strictly excluding secrets (`.env`), cache, and build directories.
      - Pushed clean, authoritative codebase commit to `origin master`.
 - **Verification Results:**
   - `README.md` formatted and verified.
   - Test suites: 154/154 pytest passed, 29/29 vitest passed.
-  - GitHub remote established and pushed to `https://github.com/gautamhardik/Jinani`.
+  - GitHub remote established and pushed to `https://github.com/gautamhardik/gnani`.
 
 ### Immediate Next Steps (Public Deployment Unblocking & Phase 11 Video Demonstration)
 1. **Host Docker Daemon Elevation:** Provide Windows administrator elevation to start `com.docker.service` for live local container builds and Compose smoke tests.
