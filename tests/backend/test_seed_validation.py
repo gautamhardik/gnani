@@ -9,8 +9,8 @@ def test_starter_pack_database_integrity(db_session):
     # 1. Store
     store = db_session.query(Store).filter(Store.store_id == "STORE001").first()
     assert store is not None
-    assert store.store_name == "Sharma General Store (Demo)"
-    assert store.slug == "sharma-general-store-demo"
+    assert store.store_name == "Everyday Needs General Store"
+    assert store.slug == "everyday-needs-general-store"
 
     # 2. Products count
     prod_count = db_session.query(Product).count()

@@ -50,7 +50,8 @@ def create_customer_session(
         store_id=store_id,
         customer_id=session_in.customer_id,
         status="active",
-        current_cart=[]
+        current_cart=[],
+        conversation_history=[]
     )
     db.add(sess)
     db.commit()
@@ -98,11 +99,33 @@ def get_session_details(
         customer_id=sess.customer_id,
         status=sess.status,
         current_cart=serialized_cart,
+        conversation_history=sess.conversation_history or [],
         total_amount=total_amount,
         item_count=len(serialized_cart),
         created_at=sess.created_at,
         updated_at=sess.updated_at
     )
+
+
+@router.get("/{session_id}/history")
+def get_session_history(
+    session_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns full conversation history associated with the customer session.
+    """
+    sess = db.query(OrderSession).filter(OrderSession.session_id == session_id).first()
+    if not sess:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session '{session_id}' not found"
+        )
+    return {
+        "session_id": sess.session_id,
+        "store_id": sess.store_id,
+        "conversation_history": sess.conversation_history or []
+    }
 
 
 @router.put("/{session_id}/cart/items/{product_id}", response_model=OrderSessionDetailResponse)

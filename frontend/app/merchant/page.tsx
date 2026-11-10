@@ -238,7 +238,7 @@ export default function MerchantDashboardPage() {
     <div className="min-h-screen bg-dukaan-canvas flex flex-col">
       {/* Top Header */}
       <MerchantHeader
-        storeName={overview?.store_name || "Sharma General Store"}
+        storeName={overview?.store_name || "Everyday Needs General Store"}
         onRefresh={handleGlobalRefresh}
         isRefreshing={isRefreshing}
       />

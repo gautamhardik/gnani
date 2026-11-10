@@ -11,6 +11,7 @@ class OrderSession(Base):
     customer_id = Column(String, ForeignKey("customers.customer_id", ondelete="SET NULL"), nullable=True)
     status = Column(String, nullable=False, default="active")
     current_cart = Column(JSON, nullable=False, default=list)
+    conversation_history = Column(JSON, nullable=False, default=list)
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 

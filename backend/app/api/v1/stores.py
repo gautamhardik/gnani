@@ -29,14 +29,14 @@ def get_store_details(
         if store_id == settings.DEMO_STORE_ID:
             return StoreResponse(
                 store_id=settings.DEMO_STORE_ID,
-                store_name="Sharma General Store",
-                slug="sharma-general-store",
+                store_name="Everyday Needs General Store",
+                slug="everyday-needs-general-store",
                 currency="INR",
                 timezone="Asia/Kolkata",
                 is_open=True,
                 opening_time="08:00 AM",
                 closing_time="10:00 PM",
-                contact_display="Sharma General Store, Main Market",
+                contact_display="Everyday Needs General Store, Main Market",
                 description="Aapki apni kirana dukaan — ab voice ordering ke saath.",
                 supported_languages=["hi-IN", "hi-en", "en-IN"]
             )
@@ -54,7 +54,7 @@ def get_store_details(
         is_open=True,
         opening_time="08:00 AM",
         closing_time="10:00 PM",
-        contact_display="Sharma General Store, Main Market",
+        contact_display=f"{store.store_name}, Main Market",
         description="Aapki apni kirana dukaan — ab voice ordering ke saath.",
         supported_languages=["hi-IN", "hi-en", "en-IN"],
         created_at=store.created_at

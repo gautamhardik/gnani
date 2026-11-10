@@ -1,7 +1,7 @@
 {
   "store_id": "STORE001",
-  "store_name": "Sharma General Store (Demo)",
-  "slug": "sharma-general-store-demo",
+  "store_name": "Everyday Needs General Store",
+  "slug": "everyday-needs-general-store",
   "description": "Fictional single-store demo tenant for DukaanSaathi.",
   "currency": "INR",
   "timezone": "Asia/Kolkata",

@@ -19,7 +19,7 @@ describe("API Client Tests", () => {
   it("fetches store details successfully", async () => {
     const mockStore = {
       store_id: "STORE001",
-      store_name: "Sharma General Store",
+      store_name: "Everyday Needs General Store",
       is_open: true,
       currency: "INR",
     };
@@ -31,7 +31,7 @@ describe("API Client Tests", () => {
 
     const data = await getStore("STORE001");
     expect(data.store_id).toBe("STORE001");
-    expect(data.store_name).toBe("Sharma General Store");
+    expect(data.store_name).toBe("Everyday Needs General Store");
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/v1/stores/STORE001"),
       expect.anything()

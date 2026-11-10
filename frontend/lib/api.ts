@@ -149,6 +149,25 @@ export async function sendVoiceTurn(
 }
 
 /**
+ * Retrieves the introductory welcome greeting for hands-free conversational voice calls.
+ */
+export async function getAgentGreeting(): Promise<{ text: string; audio_url: string | null; success: boolean }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/voice/greeting`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    return await handleResponse<{ text: string; audio_url: string | null; success: boolean }>(res);
+  } catch {
+    return {
+      text: "Namaste bhaiya! Everyday Needs General Store mein aapka swagat hai. Aaj aapko kya-kya chahiye?",
+      audio_url: null,
+      success: false,
+    };
+  }
+}
+
+/**
  * Resolves full audio playback URL for synthesized response audio.
  */
 export function getAudioPlaybackUrl(audioUrlOrId: string): string {
@@ -203,4 +222,20 @@ export async function getCustomerOrder(
     }
   );
   return handleResponse<Order>(res);
+}
+
+/**
+ * Retrieve session conversation history from the backend.
+ */
+export async function getSessionHistory(sessionId: string): Promise<Array<Record<string, unknown>>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/sessions/${sessionId}/history`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    const data = await handleResponse<{ session_id: string; conversation_history: Array<Record<string, unknown>> }>(res);
+    return data.conversation_history || [];
+  } catch {
+    return [];
+  }
 }

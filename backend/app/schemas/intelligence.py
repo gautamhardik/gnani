@@ -17,8 +17,14 @@ class IntentType(str, Enum):
     REPLACE_QUANTITY = "replace_quantity"
     PRICE_QUERY = "quote_price"
     STOCK_QUERY = "quote_stock"
+    CATALOG_QUERY = "catalog_query"
+    VIEW_CART = "view_cart"
+    CART_QUERY = "cart_query"
+    STORE_INFO = "store_info"
     CONFIRM = "confirm_order"
     CANCEL = "cancel_order"
+    GREETING = "greeting"
+    CHITCHAT = "chitchat"
     UNKNOWN = "unknown"
 
 

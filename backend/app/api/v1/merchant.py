@@ -42,7 +42,7 @@ def get_merchant_overview(
         )
 
     store = db.query(Store).filter(Store.store_id == store_id).first()
-    store_name = store.store_name if store else "Sharma General Store"
+    store_name = store.store_name if store else "Everyday Needs General Store"
 
     # 1. Pending orders
     pending_count = (

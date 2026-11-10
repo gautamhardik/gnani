@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { CartItem } from "@/types/api";
-import { CheckCircle2, ShieldCheck, AlertCircle, Loader2, ArrowLeft } from "lucide-react";
+import { CheckCircle2, ShieldCheck, AlertCircle, Loader2, ArrowLeft, Mic } from "lucide-react";
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -71,7 +71,7 @@ export function ConfirmationModal({
           <div className="bg-amber-50/60 border border-amber-200/70 rounded-xl p-3 flex items-start gap-2.5 text-xs text-amber-900 leading-relaxed">
             <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
             <div>
-              <strong>DukaanSaathi Policy:</strong> Yeh order Sharma General Store ke paas jaayega. Shopkeeper ke accept karne ke baad hi inventory book hogi.
+              <strong>DukaanSaathi Policy:</strong> Yeh order Everyday Needs General Store ke paas jaayega. Shopkeeper ke accept karne ke baad hi inventory book hogi.
             </div>
           </div>
 
@@ -100,6 +100,17 @@ export function ConfirmationModal({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Voice Prompt Badge */}
+          <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-2.5 flex items-center gap-2.5 text-xs text-emerald-900 shadow-xs">
+            <span className="relative flex h-3 w-3 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <div className="leading-tight">
+              <strong>Awaaz Se Confirm Karein:</strong> Boliye <em>&quot;Haan, bhej do&quot;</em> ya <em>&quot;Theek hai&quot;</em> &mdash; ya neeche button dabayein.
             </div>
           </div>
 

@@ -43,7 +43,11 @@ export function useAudioPlayer() {
       audio.onerror = () => {
         setIsPlaying(false);
         setPlaybackError("Failed to play assistant audio response.");
-        onEndedCallbackRef.current = null;
+        if (onEndedCallbackRef.current) {
+          const cb = onEndedCallbackRef.current;
+          onEndedCallbackRef.current = null;
+          cb();
+        }
       };
     }
 
@@ -82,6 +86,11 @@ export function useAudioPlayer() {
         setPlaybackError(err.message || "Audio playback error");
       }
       setIsPlaying(false);
+      if (onEndedCallbackRef.current) {
+        const cb = onEndedCallbackRef.current;
+        onEndedCallbackRef.current = null;
+        cb();
+      }
       return false;
     }
   }, [currentUrl]);
@@ -98,7 +107,7 @@ export function useAudioPlayer() {
       audioRef.current.pause();
       try {
         audioRef.current.currentTime = 0;
-      } catch {}
+      } catch { }
       setIsPlaying(false);
       onEndedCallbackRef.current = null;
     }

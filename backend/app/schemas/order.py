@@ -26,6 +26,7 @@ class OrderSessionResponse(BaseModel):
     customer_id: Optional[str] = None
     status: str
     current_cart: List[Any]
+    conversation_history: List[Any] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 
@@ -40,6 +41,7 @@ class OrderSessionDetailResponse(BaseModel):
     customer_id: Optional[str] = None
     status: str
     current_cart: List[Any]
+    conversation_history: List[Any] = Field(default_factory=list)
     total_amount: Decimal = Field(default=Decimal("0.00"))
     item_count: int = Field(default=0)
     created_at: datetime
@@ -86,3 +88,4 @@ class OrderResponse(BaseModel):
     rejection_reason: Optional[str] = None
     created_at: datetime
     items: List[OrderItemResponse] = []
+    conversation_history: Optional[List[Any]] = None

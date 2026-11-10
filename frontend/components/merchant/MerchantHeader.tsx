@@ -34,7 +34,7 @@ export function MerchantHeader({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base sm:text-lg font-bold text-dukaan-text leading-tight">
-                {storeName || "Sharma General Store"}
+                {storeName || "Everyday Needs General Store"}
               </h1>
               <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-dukaan-successBg text-dukaan-success border border-dukaan-success/20">
                 <span className="w-1.5 h-1.5 rounded-full bg-dukaan-success animate-pulse" />

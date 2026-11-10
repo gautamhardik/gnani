@@ -236,6 +236,10 @@ def get_order(
         except HTTPException:
             pass
 
+    # Attach conversation_history if available
+    if order.session and hasattr(order.session, "conversation_history"):
+        setattr(order, "conversation_history", order.session.conversation_history or [])
+
     if is_merchant_authorized:
         return order
 

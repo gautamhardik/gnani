@@ -60,12 +60,23 @@ export interface VoiceTurnResponse {
   cart: CartSnapshot;
   assistant_text: string;
   session_state: string; // COLLECTING | NEEDS_CLARIFICATION | AWAITING_CONFIRMATION | ORDER_PLACED | CANCELLED
-  audio_status: "generated" | "failed";
+  audio_status: "generated" | "failed" | "skipped_silence";
   audio_url?: string | null;
   audio_base64?: string | null;
+  table_data?: Array<Record<string, unknown>> | null;
+  table_title?: string | null;
   latency_ms: LatencyBreakdown;
   is_duplicate: boolean;
   warning?: string | null;
+  order_id?: string | null;
+  order?: Order | null;
+  conversation_history?: ConversationHistoryTurn[] | null;
+}
+
+export interface ConversationHistoryTurn {
+  sender: "customer" | "assistant" | string;
+  text: string;
+  timestamp?: string;
 }
 
 export interface OrderSession {
@@ -74,6 +85,7 @@ export interface OrderSession {
   customer_id?: string | null;
   status: "active" | "confirmed" | "expired";
   current_cart: CartItem[];
+  conversation_history?: ConversationHistoryTurn[];
   created_at: string;
   updated_at: string;
 }
@@ -104,5 +116,6 @@ export interface Order {
   rejection_reason?: string | null;
   created_at: string;
   items: OrderItem[];
+  conversation_history?: ConversationHistoryTurn[];
 }
 

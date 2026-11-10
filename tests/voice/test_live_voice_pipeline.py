@@ -35,7 +35,7 @@ def test_live_voice_turn_prisma_and_timbre(client: TestClient):
     assert data["session_id"] == session_id
     assert "latency_ms" in data
     assert data["latency_ms"]["stt_ms"] > 0
-    assert data["audio_status"] in ["generated", "failed"]
+    assert data["audio_status"] in ["generated", "failed", "skipped_silence"]
 
     if data["audio_url"]:
         audio_resp = client.get(data["audio_url"])

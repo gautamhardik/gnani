@@ -49,9 +49,14 @@ class VoiceTurnResponse(BaseModel):
     )
     audio_url: Optional[str] = None
     audio_base64: Optional[str] = None
+    table_data: Optional[List[Dict[str, Any]]] = None
+    table_title: Optional[str] = None
     latency_ms: LatencyBreakdown
     is_duplicate: bool = False
     warning: Optional[str] = None
+    order_id: Optional[str] = None
+    order: Optional[Dict[str, Any]] = None
+    conversation_history: Optional[List[Dict[str, Any]]] = None
 
 
 class AudioMetadata(BaseModel):

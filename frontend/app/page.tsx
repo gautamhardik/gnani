@@ -7,23 +7,24 @@ import { VoiceOrderingView } from "@/components/VoiceOrderingView";
 import { CartView } from "@/components/CartView";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { OrderSuccessView } from "@/components/OrderSuccessView";
+import { OrderHistoryView } from "@/components/OrderHistoryView";
 import { ConversationMessage } from "@/components/TranscriptList";
 import { Store, CartItem, Order } from "@/types/api";
 import {
   getStore,
   createSession,
-  getSession,
   updateCartItem,
   removeCartItem,
   sendVoiceTurn,
   getAudioPlaybackUrl,
+  getAgentGreeting,
   submitOrder,
 } from "@/lib/api";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 
 export default function DukaanSaathiApp() {
-  const [activeTab, setActiveTab] = useState<"home" | "voice" | "cart">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "voice" | "cart" | "history">("home");
   const [store, setStore] = useState<Store | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("hi-IN");
   const [sessionId, setSessionId] = useState<string>("");
@@ -35,15 +36,22 @@ export default function DukaanSaathiApp() {
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
   const [isCallMode, setIsCallMode] = useState<boolean>(true);
+  const [isCallActive, setIsCallActive] = useState<boolean>(false);
   const [callModeToast, setCallModeToast] = useState<string | null>(null);
 
   const isCallModeRef = useRef<boolean>(true);
+  const isCallActiveRef = useRef<boolean>(false);
   const isConfirmModalOpenRef = useRef<boolean>(false);
   const isProcessingTurnRef = useRef<boolean>(false);
+  const confirmedOrderRef = useRef<Order | null>(null);
 
   useEffect(() => {
     isCallModeRef.current = isCallMode;
   }, [isCallMode]);
+
+  useEffect(() => {
+    isCallActiveRef.current = isCallActive;
+  }, [isCallActive]);
 
   useEffect(() => {
     isConfirmModalOpenRef.current = isConfirmModalOpen;
@@ -52,6 +60,20 @@ export default function DukaanSaathiApp() {
   useEffect(() => {
     isProcessingTurnRef.current = isProcessingTurn;
   }, [isProcessingTurn]);
+
+  useEffect(() => {
+    confirmedOrderRef.current = confirmedOrder;
+  }, [confirmedOrder]);
+
+  // Clean session & messages on fresh page load or refresh
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("dukaansaathi_last_messages");
+        localStorage.removeItem("dukaansaathi_session_id");
+      } catch {}
+    }
+  }, []);
 
   const storeId = process.env.NEXT_PUBLIC_STORE_ID || "STORE001";
 
@@ -76,19 +98,18 @@ export default function DukaanSaathiApp() {
     cancelRecording,
   } = useVoiceRecorder({
     maxDurationSeconds: 60,
-    autoVad: isCallMode,
-    silenceMs: 1600,
-    speechThreshold: 0.12,
-    silenceThreshold: 0.08,
+    autoVad: true,
+    silenceMs: 1400,
+    speechThreshold: 0.03,
+    silenceThreshold: 0.02,
     onSilenceAutoStop: () => {
       handleStopAndSendVoiceTurn();
     },
-    noSpeechTimeoutMs: 7000,
-    onNoSpeechTimeout: () => {
-      if (isCallModeRef.current) {
-        setIsCallMode(false);
-        setCallModeToast("Silence detected — Call paused. Tap mic to resume.");
-        stopRecording();
+    noSpeechTimeoutMs: 0, // Keep continuous listening open without auto-pausing
+    onNoSpeechTimeout: () => {},
+    onBargeIn: () => {
+      if (isPlayingAudio) {
+        stopAudio();
       }
     },
     onMaxDurationReached: () => {
@@ -103,27 +124,15 @@ export default function DukaanSaathiApp() {
         const storeData = await getStore(storeId);
         setStore(storeData);
 
-        // Resume existing session if saved in localStorage, else create
-        const existingSessId = typeof window !== "undefined"
-          ? localStorage.getItem("dukaansaathi_session_id")
-          : null;
-
-        if (existingSessId) {
-          try {
-            const sessDetail = await getSession(existingSessId);
-            if (sessDetail && sessDetail.status === "active") {
-              setSessionId(sessDetail.session_id);
-              setCartItems(sessDetail.current_cart || []);
-              setCartTotal(Number(sessDetail.total_amount || 0));
-              return;
-            }
-          } catch {
-            // Expired or not found; create fresh session
-          }
+        // Always start with a fresh empty cart on page load / refresh
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("dukaansaathi_session_id");
         }
 
         const newSess = await createSession(storeId);
         setSessionId(newSess.session_id);
+        setCartItems([]);
+        setCartTotal(0);
         if (typeof window !== "undefined") {
           localStorage.setItem("dukaansaathi_session_id", newSess.session_id);
         }
@@ -155,27 +164,38 @@ export default function DukaanSaathiApp() {
         minute: "2-digit",
       });
 
-      // 1. Add customer message
-      const customerMsg: ConversationMessage = {
-        id: `cust_${Date.now()}`,
-        sender: "customer",
-        text: turnResponse.transcript || "(Khali awaz / Silence)",
-        timestamp: nowTime,
-      };
+      const isSilenceTurn =
+        !turnResponse.transcript ||
+        turnResponse.transcript.trim() === "" ||
+        turnResponse.audio_status === "skipped_silence" ||
+        turnResponse.assistant_text?.includes("sun nahi paye") ||
+        turnResponse.assistant_text === "(Khali awaz / Silence)";
 
-      // 2. Add assistant message
-      const assistantMsg: ConversationMessage = {
-        id: `asst_${Date.now()}`,
-        sender: "assistant",
-        text: turnResponse.assistant_text,
-        audioUrl: turnResponse.audio_url,
-        intent: turnResponse.intent,
-        clarificationOptions:
-          turnResponse.action_details?.clarification_options,
-        timestamp: nowTime,
-      };
+      if (!isSilenceTurn) {
+        // 1. Add customer message
+        const customerMsg: ConversationMessage = {
+          id: `cust_${Date.now()}`,
+          sender: "customer",
+          text: turnResponse.transcript,
+          timestamp: nowTime,
+        };
 
-      setMessages((prev) => [...prev, customerMsg, assistantMsg]);
+        // 2. Add assistant message (with optional table / bill / inventory widget)
+        const assistantMsg: ConversationMessage = {
+          id: `asst_${Date.now()}`,
+          sender: "assistant",
+          text: turnResponse.assistant_text,
+          audioUrl: turnResponse.audio_url,
+          intent: turnResponse.intent,
+          clarificationOptions:
+            turnResponse.action_details?.clarification_options,
+          tableData: turnResponse.table_data,
+          tableTitle: turnResponse.table_title,
+          timestamp: nowTime,
+        };
+
+        setMessages((prev) => [...prev, customerMsg, assistantMsg]);
+      }
 
       // 3. Update authoritative cart state
       if (turnResponse.cart) {
@@ -188,21 +208,47 @@ export default function DukaanSaathiApp() {
         setIsConfirmModalOpen(true);
       }
 
+      // Check if order was placed directly via voice command
+      if (turnResponse.session_state === "ORDER_PLACED" || turnResponse.order) {
+        setIsConfirmModalOpen(false);
+        if (turnResponse.order) {
+          setConfirmedOrder(turnResponse.order);
+          confirmedOrderRef.current = turnResponse.order;
+          setActiveTab("home");
+          if (typeof window !== "undefined") {
+            try {
+              const oldHist = JSON.parse(
+                localStorage.getItem("dukaansaathi_order_history") || "[]"
+              );
+              oldHist.push({
+                order_id: turnResponse.order.order_id,
+                session_id: sessionId,
+              });
+              localStorage.setItem(
+                "dukaansaathi_order_history",
+                JSON.stringify(oldHist)
+              );
+            } catch {}
+            localStorage.removeItem("dukaansaathi_session_id");
+          }
+        }
+      }
+
       // 4. Play assistant audio with continuous turn-taking for hands-free Call Mode
       if (turnResponse.audio_url) {
         const fullUrl = getAudioPlaybackUrl(turnResponse.audio_url);
         playAudio(fullUrl, () => {
-          if (isCallModeRef.current && !isConfirmModalOpenRef.current) {
+          if ((isCallActiveRef.current || isCallModeRef.current) && !confirmedOrderRef.current) {
             setTimeout(() => {
-              if (isCallModeRef.current && !isProcessingTurnRef.current) {
+              if ((isCallActiveRef.current || isCallModeRef.current) && !isProcessingTurnRef.current && !confirmedOrderRef.current) {
                 startRecording();
               }
             }, 250);
           }
         });
-      } else if (isCallModeRef.current && !isConfirmModalOpenRef.current) {
+      } else if ((isCallActiveRef.current || isCallModeRef.current) && !confirmedOrderRef.current) {
         setTimeout(() => {
-          if (isCallModeRef.current && !isProcessingTurnRef.current) {
+          if ((isCallActiveRef.current || isCallModeRef.current) && !isProcessingTurnRef.current && !confirmedOrderRef.current) {
             startRecording();
           }
         }, 250);
@@ -223,6 +269,63 @@ export default function DukaanSaathiApp() {
       setIsProcessingTurn(false);
     }
   }, [sessionId, stopRecording, playAudio, startRecording]);
+
+  // Start continuous Hands-Free Voice Call with proactive greeting
+  const handleStartCall = useCallback(async () => {
+    if (isPlayingAudio) {
+      stopAudio();
+    }
+    setIsCallActive(true);
+    isCallActiveRef.current = true;
+    setIsCallMode(true);
+    isCallModeRef.current = true;
+
+    try {
+      const greeting = await getAgentGreeting();
+      const nowTime = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const welcomeMsg: ConversationMessage = {
+        id: `greet_${Date.now()}`,
+        sender: "assistant",
+        text: greeting.text,
+        audioUrl: greeting.audio_url || undefined,
+        timestamp: nowTime,
+      };
+      setMessages((prev) => [...prev, welcomeMsg]);
+
+      if (greeting.audio_url) {
+        const fullUrl = getAudioPlaybackUrl(greeting.audio_url);
+        playAudio(fullUrl, () => {
+          if (isCallActiveRef.current && !confirmedOrderRef.current) {
+            setTimeout(() => {
+              if (isCallActiveRef.current && !isProcessingTurnRef.current && !confirmedOrderRef.current) {
+                startRecording();
+              }
+            }, 200);
+          }
+        });
+      } else {
+        setTimeout(() => {
+          if (isCallActiveRef.current && !isProcessingTurnRef.current && !confirmedOrderRef.current) {
+            startRecording();
+          }
+        }, 200);
+      }
+    } catch {
+      startRecording();
+    }
+  }, [isPlayingAudio, stopAudio, playAudio, startRecording]);
+
+  // End continuous Hands-Free Voice Call
+  const handleEndCall = useCallback(() => {
+    setIsCallActive(false);
+    isCallActiveRef.current = false;
+    stopAudio();
+    cancelRecording();
+  }, [stopAudio, cancelRecording]);
 
   // Handle Start Recording with Barge-in (stops TTS if speaking)
   const handleStartRecording = useCallback(async () => {
@@ -270,10 +373,17 @@ export default function DukaanSaathiApp() {
       }));
       const order = await submitOrder(sessionId, storeId, itemsPayload);
       setConfirmedOrder(order);
+      confirmedOrderRef.current = order;
       setIsConfirmModalOpen(false);
+      setActiveTab("home");
 
-      // Clear session from storage
+      // Persist to order history list
       if (typeof window !== "undefined") {
+        try {
+          const oldHist = JSON.parse(localStorage.getItem("dukaansaathi_order_history") || "[]");
+          oldHist.push({ order_id: order.order_id, session_id: sessionId });
+          localStorage.setItem("dukaansaathi_order_history", JSON.stringify(oldHist));
+        } catch {}
         localStorage.removeItem("dukaansaathi_session_id");
       }
     } catch (err: unknown) {
@@ -286,9 +396,13 @@ export default function DukaanSaathiApp() {
 
   const handleStartNewOrder = async () => {
     setConfirmedOrder(null);
+    confirmedOrderRef.current = null;
     setCartItems([]);
     setCartTotal(0);
     setMessages([]);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("dukaansaathi_last_messages");
+    }
     try {
       const newSess = await createSession(storeId);
       setSessionId(newSess.session_id);
@@ -361,17 +475,18 @@ export default function DukaanSaathiApp() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-md w-full mx-auto">
-        {confirmedOrder ? (
-          <OrderSuccessView
-            order={confirmedOrder}
-            onNewOrder={handleStartNewOrder}
+        {activeTab === "history" ? (
+          <OrderHistoryView
+            onBackToOrder={() => setActiveTab("voice")}
           />
-        ) : activeTab === "home" ? (
-          <StoreHomeView
-            store={store}
-            onStartOrdering={() => setActiveTab("voice")}
-            cartCount={cartItems.length}
-            onViewCart={() => setActiveTab("cart")}
+        ) : activeTab === "cart" ? (
+          <CartView
+            items={cartItems}
+            totalAmount={cartTotal}
+            onUpdateQuantity={handleUpdateCartQuantity}
+            onRemoveItem={handleRemoveCartItem}
+            onProceedToConfirm={() => setIsConfirmModalOpen(true)}
+            onStartVoice={() => setActiveTab("voice")}
           />
         ) : activeTab === "voice" ? (
           <VoiceOrderingView
@@ -382,6 +497,9 @@ export default function DukaanSaathiApp() {
             audioLevel={audioLevel}
             hasSpoken={hasSpoken}
             isCallMode={isCallMode}
+            isCallActive={isCallActive}
+            onStartCall={handleStartCall}
+            onEndCall={handleEndCall}
             onToggleCallMode={handleToggleCallMode}
             callModeToast={callModeToast}
             onDismissToast={() => setCallModeToast(null)}
@@ -397,15 +515,25 @@ export default function DukaanSaathiApp() {
             cartItems={cartItems}
             cartTotal={cartTotal}
             onViewCart={() => setActiveTab("cart")}
+            confirmedOrder={confirmedOrder}
+            onViewOrderReceipt={() => setActiveTab("home")}
+            selectedLanguage={selectedLanguage}
+          />
+        ) : confirmedOrder ? (
+          <OrderSuccessView
+            order={confirmedOrder}
+            onNewOrder={handleStartNewOrder}
+            onViewChatHistory={() => setActiveTab("voice")}
           />
         ) : (
-          <CartView
-            items={cartItems}
-            totalAmount={cartTotal}
-            onUpdateQuantity={handleUpdateCartQuantity}
-            onRemoveItem={handleRemoveCartItem}
-            onProceedToConfirm={() => setIsConfirmModalOpen(true)}
-            onStartVoice={() => setActiveTab("voice")}
+          <StoreHomeView
+            store={store}
+            onStartOrdering={() => {
+              setActiveTab("voice");
+              handleStartCall();
+            }}
+            cartCount={cartItems.length}
+            onViewCart={() => setActiveTab("cart")}
           />
         )}
       </main>

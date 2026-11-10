@@ -47,7 +47,7 @@ def merchant_login(
         )
 
     store = db.query(Store).filter(Store.store_id == settings.DEMO_STORE_ID).first()
-    store_name = store.store_name if store else "Sharma General Store"
+    store_name = store.store_name if store else "Everyday Needs General Store"
 
     # Issue short-lived cryptographically signed session token
     signed_token = create_merchant_session_token(
@@ -86,7 +86,7 @@ def get_current_merchant_profile(
     """
     store_id = current_merchant.get("store_id", settings.DEMO_STORE_ID)
     store = db.query(Store).filter(Store.store_id == store_id).first()
-    store_name = store.store_name if store else "Sharma General Store"
+    store_name = store.store_name if store else "Everyday Needs General Store"
 
     return MerchantMeResponse(
         authenticated=True,

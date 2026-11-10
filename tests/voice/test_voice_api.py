@@ -75,7 +75,7 @@ def test_voice_turn_upload_and_audio_retrieval(client: TestClient, db_session):
         assert data["action"] == "add_items"
         assert data["cart"]["item_count"] == 2
         assert Decimal(str(data["cart"]["total_amount"])) == Decimal("74.00")
-        assert "chini" in data["assistant_text"].lower() or "add" in data["assistant_text"].lower()
+        assert "chini" in data["assistant_text"].lower() or "sugar" in data["assistant_text"].lower() or "add" in data["assistant_text"].lower() or "maggi" in data["assistant_text"].lower()
         assert data["audio_status"] == "generated"
         assert data["audio_url"] == "/api/v1/voice/audio/aud_mock_test_123"
         assert data["audio_base64"] is not None

@@ -131,3 +131,4 @@ def test_price_query_carryover(db_session):
     assert len(res2.cart) == 1
     assert res2.cart[0].product_id == "PRD034"
     assert res2.cart[0].quantity == Decimal("1")
+

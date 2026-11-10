@@ -10,7 +10,7 @@ def test_get_demo_store(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["store_id"] == "STORE001"
-    assert "Sharma General Store" in data["store_name"]
+    assert "Everyday Needs General Store" in data["store_name"]
     assert data["is_open"] is True
     assert "hi-IN" in data["supported_languages"]
     assert "currency" in data

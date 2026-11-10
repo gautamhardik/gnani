@@ -69,11 +69,7 @@ class PrismaSTTService:
 
         headers = {
             "X-API-Key-ID": self.api_key,
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/128.0.0.0 Safari/537.36 DukaanSaathi/1.0"
-            )
+            "User-Agent": "DukaanSaathi/1.0"
         }
 
         files = {
@@ -86,56 +82,86 @@ class PrismaSTTService:
             "format": format_mode
         }
 
-        try:
-            resp = requests.post(
-                self.endpoint_url,
-                headers=headers,
-                files=files,
-                data=data,
-                timeout=(3.0, float(self.timeout_seconds))
-            )
-            roundtrip_ms = (time.time() - start_time) * 1000
-
-            if resp.status_code == 200:
-                result = resp.json()
-                transcript = result.get("transcript", "").strip()
-                detected_lang = result.get("detected_language_code", "hi-IN")
-                proc_time = result.get("processing_time", 0.0)
-                proc_time_ms = proc_time * 1000 if isinstance(proc_time, (int, float)) else 0.0
-                req_id = result.get("request_id")
-
-                return STTResult(
-                    success=True,
-                    transcript=transcript,
-                    detected_language=detected_lang,
-                    processing_time_ms=round(proc_time_ms, 2),
-                    latency_ms=round(roundtrip_ms, 2),
-                    request_id=req_id
+        # Up to 3 attempts with exponential backoff on transient 403 / 5xx / timeout
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            start_time = time.time()
+            try:
+                resp = requests.post(
+                    self.endpoint_url,
+                    headers=headers,
+                    files=files,
+                    data=data,
+                    timeout=(3.0, float(self.timeout_seconds))
                 )
-            else:
-                err_msg = f"Prisma HTTP {resp.status_code}: {resp.text[:200]}"
+                roundtrip_ms = (time.time() - start_time) * 1000
+
+                if resp.status_code == 200:
+                    result = resp.json()
+                    transcript = result.get("transcript", "").strip()
+                    detected_lang = result.get("detected_language_code", "hi-IN")
+                    proc_time = result.get("processing_time", 0.0)
+                    proc_time_ms = proc_time * 1000 if isinstance(proc_time, (int, float)) else 0.0
+                    req_id = result.get("request_id")
+
+                    return STTResult(
+                        success=True,
+                        transcript=transcript,
+                        detected_language=detected_lang,
+                        processing_time_ms=round(proc_time_ms, 2),
+                        latency_ms=round(roundtrip_ms, 2),
+                        request_id=req_id
+                    )
+                elif resp.status_code in [403, 429, 500, 502, 503, 504] and attempt < max_attempts:
+                    logger.warning(
+                        "Prisma STT transient %d (attempt %d/%d). Retrying in %.1fs...",
+                        resp.status_code, attempt, max_attempts, 0.5 * attempt
+                    )
+                    time.sleep(0.5 * attempt)
+                    continue
+                else:
+                    # Provide clean human-friendly message if Cloudflare HTML page was returned
+                    raw_err = resp.text.strip()
+                    if raw_err.startswith("<!DOCTYPE") or "<html" in raw_err:
+                        err_msg = f"Prisma STT rate limited or gateway blocked (HTTP {resp.status_code})"
+                    else:
+                        err_msg = f"Prisma HTTP {resp.status_code}: {raw_err[:120]}"
+                    logger.error(err_msg)
+                    return STTResult(
+                        success=False,
+                        latency_ms=round(roundtrip_ms, 2),
+                        error_message=err_msg
+                    )
+
+            except requests.Timeout:
+                latency = (time.time() - start_time) * 1000
+                if attempt < max_attempts:
+                    logger.warning("Prisma STT timeout (attempt %d/%d). Retrying...", attempt, max_attempts)
+                    time.sleep(0.5 * attempt)
+                    continue
+                err_msg = f"Prisma STT request timed out after {self.timeout_seconds}s"
                 logger.error(err_msg)
                 return STTResult(
                     success=False,
-                    latency_ms=round(roundtrip_ms, 2),
+                    latency_ms=round(latency, 2),
+                    error_message=err_msg
+                )
+            except Exception as e:
+                latency = (time.time() - start_time) * 1000
+                if attempt < max_attempts:
+                    logger.warning("Prisma STT error %s (attempt %d/%d). Retrying...", e, attempt, max_attempts)
+                    time.sleep(0.5 * attempt)
+                    continue
+                err_msg = f"Prisma STT connection failed: {e}"
+                logger.error(err_msg)
+                return STTResult(
+                    success=False,
+                    latency_ms=round(latency, 2),
                     error_message=err_msg
                 )
 
-        except requests.Timeout:
-            latency = (time.time() - start_time) * 1000
-            err_msg = f"Prisma STT request timed out after {self.timeout_seconds}s"
-            logger.error(err_msg)
-            return STTResult(
-                success=False,
-                latency_ms=round(latency, 2),
-                error_message=err_msg
-            )
-        except Exception as e:
-            latency = (time.time() - start_time) * 1000
-            err_msg = f"Prisma STT connection failed: {e}"
-            logger.error(err_msg)
-            return STTResult(
-                success=False,
-                latency_ms=round(latency, 2),
-                error_message=err_msg
-            )
+        return STTResult(
+            success=False,
+            latency_ms=0.0,
+            error_message="Prisma STT service temporarily unavailable. Please try speaking again."
+        )

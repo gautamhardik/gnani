@@ -2,14 +2,15 @@
 
 import React from "react";
 import { Order } from "@/types/api";
-import { CheckCircle, Clock, ArrowRight } from "lucide-react";
+import { CheckCircle, Clock, ArrowRight, MessageSquare } from "lucide-react";
 
 interface OrderSuccessViewProps {
   order: Order;
   onNewOrder: () => void;
+  onViewChatHistory?: () => void;
 }
 
-export function OrderSuccessView({ order, onNewOrder }: OrderSuccessViewProps) {
+export function OrderSuccessView({ order, onNewOrder, onViewChatHistory }: OrderSuccessViewProps) {
   return (
     <div className="p-6 flex flex-col items-center text-center animate-in fade-in duration-300">
       <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4 shadow-warm">
@@ -52,16 +53,27 @@ export function OrderSuccessView({ order, onNewOrder }: OrderSuccessViewProps) {
       </div>
 
       <div className="text-xs text-dukaan-muted bg-stone-100 border border-stone-200 rounded-xl p-3 max-w-sm mb-6 leading-relaxed">
-        Sharma General Store aapka saaman check karke accept karega. Kirana dukaan par saaman taiyaar milenge.
+        Everyday Needs General Store aapka saaman check karke accept karega. Kirana dukaan par saaman taiyaar milenge.
       </div>
 
-      <button
-        onClick={onNewOrder}
-        className="inline-flex items-center gap-2 bg-dukaan-primary hover:bg-dukaan-primaryDark text-white text-sm font-semibold px-6 py-3 rounded-xl shadow-warm transition-all"
-      >
-        <span>Naya Order Lagayein</span>
-        <ArrowRight className="w-4 h-4" aria-hidden="true" />
-      </button>
+      <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-xs">
+        {onViewChatHistory && (
+          <button
+            onClick={onViewChatHistory}
+            className="w-full inline-flex items-center justify-center gap-2 bg-dukaan-card border border-dukaan-border hover:bg-stone-50 text-dukaan-text text-sm font-semibold px-4 py-3 rounded-xl shadow-xs transition-all"
+          >
+            <MessageSquare className="w-4 h-4 text-dukaan-primary" aria-hidden="true" />
+            <span>Chat History Dekhein</span>
+          </button>
+        )}
+        <button
+          onClick={onNewOrder}
+          className="w-full inline-flex items-center justify-center gap-2 bg-dukaan-primary hover:bg-dukaan-primaryDark text-white text-sm font-semibold px-6 py-3 rounded-xl shadow-warm transition-all"
+        >
+          <span>Naya Order</span>
+          <ArrowRight className="w-4 h-4" aria-hidden="true" />
+        </button>
+      </div>
     </div>
   );
 }

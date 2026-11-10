@@ -26,24 +26,26 @@ interface UseVoiceRecorderOptions {
   maxDurationSeconds?: number;
   onMaxDurationReached?: () => void;
   autoVad?: boolean;
-  silenceMs?: number; // silence duration before auto-stop (default 1600ms)
-  speechThreshold?: number; // audio level threshold for speech onset (default 0.12)
-  silenceThreshold?: number; // audio level threshold for silence (default 0.08)
+  silenceMs?: number; // silence duration before auto-stop (default 1200ms)
+  speechThreshold?: number; // audio level threshold for speech onset (default 0.035)
+  silenceThreshold?: number; // audio level threshold for silence (default 0.02)
   onSilenceAutoStop?: () => void;
-  noSpeechTimeoutMs?: number; // no speech timeout (default 7000ms)
+  noSpeechTimeoutMs?: number; // no speech timeout (default 0 - continuous)
   onNoSpeechTimeout?: () => void;
+  onBargeIn?: () => void; // Blueprint sub-millisecond barge-in trigger when user interrupts agent speech
 }
 
 export function useVoiceRecorder({
   maxDurationSeconds = 60,
   onMaxDurationReached,
-  autoVad = false,
-  silenceMs = 1600,
-  speechThreshold = 0.12,
-  silenceThreshold = 0.08,
+  autoVad = true,
+  silenceMs = 1000,
+  speechThreshold = 0.03,
+  silenceThreshold = 0.02,
   onSilenceAutoStop,
-  noSpeechTimeoutMs = 7000,
+  noSpeechTimeoutMs = 0,
   onNoSpeechTimeout,
+  onBargeIn,
 }: UseVoiceRecorderOptions = {}) {
   const [status, setStatus] = useState<RecorderState>("ready");
   const [duration, setDuration] = useState<number>(0);
@@ -64,6 +66,23 @@ export function useVoiceRecorder({
   const recordStartRef = useRef<number>(0);
   const noSpeechTriggeredRef = useRef<boolean>(false);
   const autoStopTriggeredRef = useRef<boolean>(false);
+  const noiseFloorRef = useRef<number>(0.015);
+  const peakSpeechRef = useRef<number>(0.05);
+
+  const onSilenceAutoStopRef = useRef(onSilenceAutoStop);
+  useEffect(() => {
+    onSilenceAutoStopRef.current = onSilenceAutoStop;
+  }, [onSilenceAutoStop]);
+
+  const onNoSpeechTimeoutRef = useRef(onNoSpeechTimeout);
+  useEffect(() => {
+    onNoSpeechTimeoutRef.current = onNoSpeechTimeout;
+  }, [onNoSpeechTimeout]);
+
+  const onBargeInRef = useRef(onBargeIn);
+  useEffect(() => {
+    onBargeInRef.current = onBargeIn;
+  }, [onBargeIn]);
 
   // Detect supported browser MIME types
   const getSupportedMimeType = useCallback((): string => {
@@ -137,51 +156,92 @@ export function useVoiceRecorder({
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
 
+      let consecutiveSpeechFrames = 0;
+
       const tick = () => {
         if (!analyserRef.current) return;
         analyserRef.current.getByteFrequencyData(dataArray);
 
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
+        // Focus specifically on the human voice frequency band (bins 2 to 36, ~300Hz - 3400Hz)
+        let voiceSum = 0;
+        const voiceBins = Math.min(36, bufferLength);
+        for (let i = 2; i < voiceBins; i++) {
+          voiceSum += dataArray[i];
         }
-        const avg = sum / bufferLength;
-        const normalized = Math.min(1, avg / 128); // 0 to 1
+        const voiceAvg = voiceSum / Math.max(1, voiceBins - 2);
+        // Normalized 0 to 1 based on voice band amplitude
+        const normalized = Math.min(1, voiceAvg / 100);
         setAudioLevel(normalized);
 
-        // Auto-VAD State Machine
+        // Auto-VAD State Machine with Voice-Band Noise Floor Tracking
         const now = Date.now();
+        const elapsed = now - recordStartRef.current;
+
+        // Baseline noise floor calibration during initial silence (<350ms)
+        if (elapsed < 350) {
+          noiseFloorRef.current = Math.min(noiseFloorRef.current, Math.max(0.01, normalized));
+        } else if (!hasSpokenRef.current && normalized < noiseFloorRef.current * 1.4) {
+          noiseFloorRef.current = noiseFloorRef.current * 0.95 + normalized * 0.05;
+        }
+
+        const dynamicSpeechThreshold = Math.max(0.035, noiseFloorRef.current + 0.025);
+        const dynamicSilenceThreshold = Math.max(0.025, noiseFloorRef.current + 0.018);
+
+        // Blueprint Sub-millisecond Barge-In: if user speaks while agent is playing speech
+        if (status === "speaking" && normalized >= dynamicSpeechThreshold) {
+          if (onBargeInRef.current) {
+            onBargeInRef.current();
+          }
+        }
+
         if (autoVad && !autoStopTriggeredRef.current) {
           if (!hasSpokenRef.current) {
             // Monitor for onset of user speech
-            if (normalized >= speechThreshold) {
-              hasSpokenRef.current = true;
-              setHasSpoken(true);
-              silenceStartRef.current = null;
-            } else if (noSpeechTimeoutMs && now - recordStartRef.current >= noSpeechTimeoutMs) {
-              if (!noSpeechTriggeredRef.current) {
-                noSpeechTriggeredRef.current = true;
-                if (onNoSpeechTimeout) {
-                  onNoSpeechTimeout();
+            if (normalized >= dynamicSpeechThreshold) {
+              consecutiveSpeechFrames++;
+              if (consecutiveSpeechFrames >= 2) {
+                hasSpokenRef.current = true;
+                peakSpeechRef.current = normalized;
+                setHasSpoken(true);
+                silenceStartRef.current = null;
+              }
+            } else {
+              consecutiveSpeechFrames = 0;
+              if (noSpeechTimeoutMs && elapsed >= noSpeechTimeoutMs) {
+                if (!noSpeechTriggeredRef.current) {
+                  noSpeechTriggeredRef.current = true;
+                  if (onNoSpeechTimeoutRef.current) {
+                    onNoSpeechTimeoutRef.current();
+                  }
                 }
               }
             }
           } else {
-            // User already started speaking; monitor for trailing silence
-            if (normalized < silenceThreshold) {
+            // User has spoken! Track peak voice volume
+            if (normalized > peakSpeechRef.current) {
+              peakSpeechRef.current = normalized;
+            }
+
+            // User is in a pause if voice-band energy falls back near noise floor or well below peak
+            const silenceCutoff = Math.max(dynamicSilenceThreshold, peakSpeechRef.current * 0.35);
+            const isQuiet = normalized <= silenceCutoff;
+
+            if (isQuiet) {
               if (!silenceStartRef.current) {
                 silenceStartRef.current = now;
-              } else if (now - silenceStartRef.current >= silenceMs) {
-                // User finished speaking! Auto-stop recording
+              } else if (now - silenceStartRef.current >= silenceMs && elapsed >= 700) {
+                // User paused for silenceMs! Auto-stop and trigger AI turn
                 autoStopTriggeredRef.current = true;
-                if (onSilenceAutoStop) {
-                  onSilenceAutoStop();
+                if (onSilenceAutoStopRef.current) {
+                  onSilenceAutoStopRef.current();
                 }
                 return;
               }
             } else {
-              // Active speech resumed; reset trailing silence timer
-              silenceStartRef.current = null;
+              // Only reset silence if speech is clearly active (avoid resetting on 1-frame mic noise)
+              if (normalized > dynamicSpeechThreshold) {
+                silenceStartRef.current = null;
+              }
             }
           }
         }
@@ -203,6 +263,8 @@ export function useVoiceRecorder({
     silenceStartRef.current = null;
     noSpeechTriggeredRef.current = false;
     autoStopTriggeredRef.current = false;
+    noiseFloorRef.current = 0.015;
+    peakSpeechRef.current = 0.05;
     recordStartRef.current = Date.now();
 
     if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) {

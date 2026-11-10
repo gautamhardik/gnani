@@ -93,9 +93,9 @@ class AssistantResponseGenerator:
         if state == DialogueState.AWAITING_CONFIRMATION or act_name in ["awaiting_confirmation", "read_back_and_ask"]:
             return action.message or f"Aapka total bill {len(turn_response.cart)} items ke liye {total_spoken} hua. Kya order confirm kar dein?"
 
-        # 2. State: CANCELLED
-        if state == DialogueState.CANCELLED:
-            return "Theek hai bhaiya, aapka order cancel kar diya gaya hai."
+        # 2. State: CANCELLED or action: cancel_order
+        if state == DialogueState.CANCELLED or act_name == "cancel_order":
+            return action.message or "Theek hai bhaiya, aapka order cancel kar diya gaya hai."
 
         # 3. Action: clarify_product (Ambiguous SKUs)
         if act_name == "clarify_product":

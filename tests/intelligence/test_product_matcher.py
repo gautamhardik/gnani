@@ -103,3 +103,17 @@ def test_all_matched_products_exist_in_db(db_session):
             p = db_session.query(Product).filter(Product.product_id == res.product_id).first()
             assert p is not None, f"Matched product {res.product_id} for query '{q}' does not exist in DB!"
             assert p.is_active is True
+
+
+def test_tri_modal_rrf_phonetic_recovery(db_session):
+    """
+    Tests that the 4-Stage Indic Soundex & Reciprocal Rank Fusion (RRF) recovers
+    spelling and transliteration variations (e.g. 'aashirvad' -> Aashirvaad Atta).
+    """
+    matcher = ProductMatcher(db_session)
+
+    # 'aashirvad' has soundex matching 'aashirvaad'
+    res = matcher.match_product("aashirvad")
+    assert res.matched is True
+    assert res.product is not None
+    assert "Aashirvaad" in res.product.name
